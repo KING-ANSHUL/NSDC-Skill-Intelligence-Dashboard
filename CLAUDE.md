@@ -43,3 +43,9 @@ Key mechanisms:
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).
 - When making layout/content changes, always re-run the Playwright verification sweep described above before considering the change done.
 - Prefer surgical Python string-replacement scripts (read the file, `assert count==1`, replace, write) over rewriting large blocks by hand — the file is 400+ KB and manual edits are error-prone.
+
+## Keeping this file in sync (read this every session)
+
+This file is the shared memory between everyone working on this project through Claude — it is committed to the repo, so a teammate's `git pull` is the only way they get context on what you did and why. If this file is stale, the next person starts from zero.
+
+**Before ending any session that changed something meaningful** (a decision, a new mechanism, a lesson learned, a data source, a fixed bug worth remembering), update the relevant section above — then `git add CLAUDE.md`, commit, and push it along with the code change. A code diff without the "why" behind it is only half the context.

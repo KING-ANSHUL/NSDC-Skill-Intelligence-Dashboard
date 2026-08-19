@@ -23,8 +23,3 @@ This file is what makes `git pull` tell you "what changed and why", not just
 **Code changed:** none (tooling only) — added CLAUDE.md, .gitignore, .gitattributes, `.githooks/pre-commit`, `.github/workflows/context-sync.yml`, this file
 **Chat summary:** Made the project collaborative through Claude Code rather than a plain file share, so a teammate's Claude session gets full context automatically instead of the user re-explaining it each time. Set up a private GitHub repo, wrote CLAUDE.md documenting the dashboard's architecture and hard-won lessons, then hardened it: a pre-commit hook blocks any commit touching the dashboard HTML unless CLAUDE.md (and now this log) is updated in the same commit, and a GitHub Action re-checks the same rule server-side so it still catches a fresh clone that skipped the one-time local hook setup. Also removed `NSDC_Skill_Intelligence_Prototype.html`, which was superseded and no longer referenced anywhere.
 **Context updated:** CLAUDE.md now documents the enforcement mechanism and the one-time collaborator setup (`git config core.hooksPath .githooks`).
-
-## 2026-08-18 (test entry) — verifying the sync notification
-**Code changed:** NSDC_Skill_Intelligence_Dashboard.html — added a harmless test comment near the top
-**Chat summary:** This is a dry-run to confirm the post-merge hook actually prints on a teammate's `git pull`, before relying on it for real.
-**Context updated:** none

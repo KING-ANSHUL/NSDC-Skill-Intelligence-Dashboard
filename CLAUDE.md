@@ -46,6 +46,18 @@ Key mechanisms:
 - **Batch sizes are illustrative.** 45 is the hard cap for every trade; sanctioned seats are drawn from {30, 35, 40, 45} and differ per batch. No SIDH lookup for now.
 - **This dashboard is a historical (T−1) mockup and stays completely separate from the live dashboard** (the older, separately-built product). Its purpose is to demonstrate capability once SIDH and camera data arrive. Nothing here connects to a real feed, and no label may claim to be live.
 
+## Provenance is the product (audit findings, 2026-08-19)
+
+An adversarial audit of this file confirmed 30 defects, and the worst were all provenance lies rather than layout bugs. Treat these as standing rules:
+
+- **A KPI's `src` must match where its number actually comes from.** Active Time %, Unsupervised Time %, Idle Time % and Instructor Presence Timeline were tagged `measured` while their values are computed from `MI`/`modelInstructor()` — the seeded model in section 5. No instructor detector exists. They are now `modelled`. Before tagging anything `measured`, trace the value back to `SER10`/the real export; if it passes through `MCH` or `MI`, it is modelled.
+- **The camera drawer must not claim more than the space can deliver.** Its header now reads the KPI's own `src`, and says "no camera on this space" for `nc-1` (the Assessment Hall), which `SPACES` declares `role:"uncovered"` and the Coverage page reports as a coverage gap.
+- **The "Measured only" toggle must actually do something.** Its CSS targets `.is-modelled`; `kcard()` now emits that class for modelled cards. If you add a new card kind, keep the class.
+- **The provenance legend must be visible at presentation width.** It was hidden below 2080px — i.e. hidden at the 1536px this is actually shown at, leaving 57 dots with no key. Breakpoint is now 1180px.
+- **Two-source enforcement caught a real breach:** "Active Class-Hours" compared against `committedCoveredMin`, a window derived from `COURSES[].start` — a declared daily batch start time. A centre that shifts its declared start would have repaired its own score. It now compares against `committedMin` (the accreditation-time hours-per-day commitment). `deriveDay()` still computes `lateStart`/`earlyFinish` from the same schedule fields — those are the register's red-cut KPIs and must never be surfaced.
+- **Units must match the label.** `offStats` counted camera-minutes for Camera-Off and wall-clock minutes for Server-Off, rendering both as "min": 05 Aug read 714 min inside a 754-min window. Both are wall-clock now, with `camSlotMin` kept separately for the camera-minutes total.
+- **Every aggregate must be honest about what it averaged.** `PARTIAL["ALL"]` unioned the daily windows and made Feed Availability read a flat 24.0 h against a real 18.8 h mean; `offStats("ALL")` read the averaged series (only −1 when all four days were dark) and reported zero outages beside a card saying 1,260 minutes without feed; `FEEDMETA["ALL"]` averaged slots but summed gaps. All three now average the real days. `MI["ALL"]` is still the latest day — averaging presence bits would invent a state that never occurred — so the strip's title says "latest day only" when the scope is ALL.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

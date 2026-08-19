@@ -86,7 +86,7 @@ body{
 .mh-title span{font-size:10px;color:var(--muted);white-space:nowrap}
 @media(max-width:1500px){.mh-title span{display:none}}
 .mh-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex:none}
-@media(max-width:2080px){.masthead .skey{display:none}}
+@media(max-width:1180px){.masthead .skey{display:none}}
 @media(max-width:1240px){.mh-msde,.mh-sep{display:none}}
 .clock{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .clock b{font-weight:650;color:var(--ink)}
@@ -1293,7 +1293,7 @@ const METRICS=[
   {k:"equip",  short:"Equipment",    n:"Equipment Utilization Rate", ref:70, page:3,
    sub:"Share of a practical session's time the lab's machinery shows detected activity"},
   {k:"assess", short:"Assessment",   n:"Assessment Attendance Rate", ref:90, page:4,
-   sub:"Students detected present on assessment day against students enrolled"},
+   sub:"Candidates detected present on assessment day against the eligible list"},
   {k:"enrol",  short:"Enrollment",   n:"Center-Wide Enrollment Utilization Rate", ref:85, page:1,
    sub:"Total enrolled headcount against total sanctioned capacity"},
   {k:"cover",  short:"Coverage",     n:"Camera Coverage Ratio",      ref:78, page:1,
@@ -1631,8 +1631,11 @@ const ALLD="ALL";
     }
     SER10[c][ALLD]=out;
   });
-  PARTIAL[ALLD]={from:Math.min(...FEED_DATES.map(d=>PARTIAL[d].from)),
-                 to:Math.max(...FEED_DATES.map(d=>PARTIAL[d].to)),full:false};
+  /* average the covered window — unioning it would erase the two partial
+     export days and inflate Feed Availability to a flat 24 h */
+  const covLen=avg(FEED_DATES.map(d=>PARTIAL[d].to-PARTIAL[d].from));
+  const covFrom=avg(FEED_DATES.map(d=>PARTIAL[d].from));
+  PARTIAL[ALLD]={from:Math.round(covFrom),to:Math.round(covFrom+covLen),full:false};
   Object.keys(COV).forEach(c=>{ if(!COV[c]) return;
     const f=Math.min(...FEED_DATES.map(d=>COV[c][d]?COV[c][d][0]:1e9));
     const t=Math.max(...FEED_DATES.map(d=>COV[c][d]?COV[c][d][1]:-1));
@@ -1640,11 +1643,14 @@ const ALLD="ALL";
   Object.keys(FEEDMETA).forEach(c=>{
     FEEDMETA[c][ALLD]={
       slots:Math.round(avg(FEED_DATES.map(d=>FEEDMETA[c][d]?FEEDMETA[c][d].slots:0))),
-      gaps:FEED_DATES.reduce((a,d)=>a+(FEEDMETA[c][d]?FEEDMETA[c][d].gaps:0),0)};
+      /* averaged, not summed — the drawer prints slots and gaps adjacently
+         and a summed gap count against a mean slot count is 4x too high */
+      gaps:Math.round(avg(FEED_DATES.map(d=>FEEDMETA[c][d]?FEEDMETA[c][d].gaps:0)))};
   });
   D[ALLD]={};
-  /* the instructor-model strip has no meaningful average — the All-days
-     presence strip shows the latest day and says so via DAYLBL */
+  /* a presence strip has no meaningful average: averaging 0/1 bits across days
+     would invent a state that never occurred. The All-days strip therefore shows
+     the LATEST day, and every reader of it must say so on screen. */
   MI[ALLD]=MI[FEED_DATES[FEED_DATES.length-1]];
   ROOMS.concat(COMMON).forEach(r=>{
     const recs=FEED_DATES.map(d=>D[d][r]).filter(Boolean);
@@ -2491,7 +2497,7 @@ function drawScene(ctx,sc,W,H,detail){
     /* pinned to the top edge of the quad, above the first row of ID labels */
     ctx.font="700 8.5px "+CSSV("--font");
     ctx.fillStyle=hot?"#9ccdff":"#5c86ab";
-    ctx.fillText(sc.sp.type==="assessment"?"ZONE · INVIGILATION AREA"
+    ctx.fillText(sc.sp.type==="assessment"?"ZONE · ASSESSOR SUPERVISION AREA"
                                           :"ZONE · INSTRUCTION AREA",q1.x+5,q1.y-5);
   }
 
@@ -2959,7 +2965,10 @@ function openCamDrawer(btn,o){
   dr.appendChild(el("div",{class:"cd-h"},[
     el("i",{class:"cd-dot"}),
     el("b",{text:o.lbl}),
-    el("em",{text:"measured from "+sp.name+" · "+camLabel(cam.space)}),
+    el("em",{text:(SP[cam.space].role==="uncovered"
+      ? "no camera on this space — modelled preview of "
+      : (o.src==="modelled" ? "proposed detector over " : "measured from "))
+      +sp.name+(SP[cam.space].role==="uncovered"?"":" · "+camLabel(cam.space))}),
     close]));
   const n0=SYNCS.length;
   dr.appendChild(buildCameraPanel({focus:cam.space,signal:cam.signal,cap:cam.cap,
@@ -3383,7 +3392,8 @@ function sparkline(vals,cur,ref){
 
 function kcard(o){
   const tone=o.tone||null;
-  const c=el("div",{class:"kc b-"+(tone||o.src||"measured")});
+  const c=el("div",{class:"kc b-"+(tone||o.src||"measured")+
+    (o.src==="modelled"?" is-modelled":"")});
   const h=el("div",{class:"kc-h"},[srcDot(o.src||"measured"),el("u",{text:o.lbl})]);
   if(o.delta&&o.delta.v!=null&&isFinite(o.delta.v)){
     const up=o.delta.v>0.049, dn=o.delta.v<-0.049;
@@ -3425,7 +3435,7 @@ function kcard(o){
   /* a figure the camera produced can show you the camera it came from */
   if(o.cam&&SP[o.cam.space]&&S.geo.lvl==="ctr"){
     const b=el("button",{class:"kc-cam","aria-expanded":"false",
-      title:"Open the camera this figure is measured from"},
+      title:"Open the camera signals behind this figure"},
       [el("i"),el("span",{text:"Camera Signals"})]);
     b.addEventListener("click",ev=>{ev.stopPropagation();openCamDrawer(b,o);});
     f.appendChild(b);
@@ -3950,10 +3960,11 @@ function pageCentreOverview(){
       note:"A classroom counts as active once more than "+COHORT_THR+" people are held together in it — the spec's own definition of a batch."}),
     kcard({lbl:"Active Class-Hours",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:fmt(R.activeHours,1),unit:"h",
       tone:R.util==null?null:rygTone(R.util,75),
-      cmp:{seen:R.activeHours,declared:R.committedSeenHours,
-        seenTxt:fmt(R.activeHours,1)+"h",decTxt:fmt(R.committedSeenHours,1)+"h"},
-      chip:R.util==null?null:{t:pc(R.util)+" of schedule",tone:rygTone(R.util,75)},
-      note:"Hours a cohort and an instructor were both present, against the scheduled hours the export actually covers."}),
+      cmp:{seen:R.activeHours,declared:R.committedHours,
+        seenTxt:fmt(R.activeHours,1)+"h",decTxt:fmt(R.committedHours,1)+"h committed"},
+      chip:R.committedHours?{t:pc(R.activeHours/R.committedHours*100)+" of committed hours",
+                             tone:rygTone(R.activeHours/R.committedHours*100,75)}:null,
+      note:"Hours a cohort and an instructor were both present, against the hours per day committed at accreditation. Deliberately NOT compared against a declared daily timetable — a centre that shifts its own schedule must not be able to repair its own score."}),
   ]));
 
   v.appendChild(sec("Center Identity & Permitted Sectors","declared at accreditation"));
@@ -4127,9 +4138,9 @@ function pageAttendance(){
     return rs.reduce((a,r)=>a+(r.activeMin||0),0)/tot*100;
   });
   const lowDays=actByDay.filter(x=>x<40).length;
-  v.appendChild(sec("Active Hours & Instructor Presence","camera · share of the observed day"));
+  v.appendChild(sec("Active Hours & Instructor Presence","proposed instructor detector · share of the observed day"));
   v.appendChild(kg(4,[
-    kcard({lbl:"Active Time %",src:"measured",cam:{space:busiestRoom(),signal:"instructor"},
+    kcard({lbl:"Active Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pAct),tone:rygTone(pAct,75),
       tri:[{k:"Active",v:zAct,c:ST.good},{k:"Unsupervised",v:zUns,c:ST.warning},
            {k:"Idle",v:zIdl,c:CSSV("--rule")}],
@@ -4138,16 +4149,16 @@ function pageAttendance(){
           :(pAct<40?{t:"single-day dip — watch, don't act",tone:"warn"}
                    :{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)}),
       note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),
-    kcard({lbl:"Unsupervised Time %",src:"measured",cam:{space:busiestRoom(),signal:"instructor"},
+    kcard({lbl:"Unsupervised Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pUns),tone:pUns>10?"crit":pUns>5?"warn":"good",
       meter:clamp(pUns,0,100),meterK:pUns>10?"crit":pUns>5?"warn":"ok",
       chip:pUns>0?{t:"learning that should be happening",tone:"warn"}:{t:"none observed",tone:"ok"},
       note:"Share of the day a room had a cohort present but no instructor."}),
-    kcard({lbl:"Idle Time %",src:"measured",cam:{space:busiestRoom(),signal:"headcount"},
+    kcard({lbl:"Idle Time %",src:"modelled",cam:{space:busiestRoom(),signal:"headcount"},
       val:pc(pIdl),tone:pIdl>40?"crit":pIdl>25?"warn":"good",
       meter:clamp(pIdl,0,100),meterK:pIdl>40?"crit":pIdl>25?"warn":"ok",
       foot:"nobody in the room at all"}),
-    kcard({lbl:"Instructor Presence Timeline",src:"measured",
+    kcard({lbl:"Instructor Presence Timeline",src:"modelled",
       cam:{space:busiestRoom(),signal:"instructor"},
       val:live.length,unit:"of "+cs.length+" rooms",
       tone:rygTone(live.length,cs.length),
@@ -4313,7 +4324,7 @@ function pageAttendance(){
         foot:"of the time a cohort was in the room"}),
     ]));
     if(mi) v.appendChild(cgrid(1,[
-      cx("Instructor Presence by Trade",null,()=>presenceStrip(mi.bits,mi.from,mi.step),null,
+      cx("Instructor Presence by Trade"+(S.date===ALLD?" · latest day only":""),null,()=>presenceStrip(mi.bits,mi.from,mi.step),null,
         "Ten-minute blocks. Grey means no cohort was in the room, so the question does not apply.")
     ]));
   }
@@ -4515,19 +4526,43 @@ function pageAssessment(){
 /* Splits missing feed into per-camera outages (server up, camera off) and
    whole-centre outages (server down) inside the covered window of a day. */
 function offStats(date){
+  /* the ALL series is a cross-day MEAN, so it is only -1 when every day was
+     dark at that slot — reading it directly reported zero outages. Average
+     the four real days instead. */
+  if(date===ALLD){
+    const per=FEED_DATES.map(offStats).filter(Boolean);
+    if(!per.length) return null;
+    const worstBy={};
+    per.forEach(o=>{if(o.worst) worstBy[o.worst]=(worstBy[o.worst]||0)+o.worstMin;});
+    let worst=null,worstMin=0;
+    Object.keys(worstBy).forEach(c=>{const m=worstBy[c]/per.length;
+      if(m>worstMin){worstMin=m;worst=c;}});
+    return {srvMin:avg(per.map(o=>o.srvMin)), camMin:avg(per.map(o=>o.camMin)),
+            camSlotMin:avg(per.map(o=>o.camSlotMin)), worst, worstMin};
+  }
   const win=PARTIAL[date]; if(!win) return null;
   const s0=sl(win.from), s1=sl(win.to);
-  let srv=0, cam=0;
+  /* srv and cam are both WALL-CLOCK minutes: a slot counts once, whether one
+     camera or three were dark in it. camSlotMin keeps the camera-minutes total
+     separately so the detail survives without being mislabelled as clock time. */
+  let srv=0, cam=0, camSlots=0;
   for(let i=s0;i<=s1;i++){
     let down=0;
     for(const c of CAMS) if(SER10[c][date][i]<0) down++;
-    if(down===CAMS.length) srv++; else cam+=down;
+    if(down===CAMS.length) srv++;
+    else if(down>0){ cam++; camSlots+=down; }
   }
   let worst=null, worstN=0;
   CAMS.forEach(c=>{let n=0;
-    for(let i=s0;i<=s1;i++) if(SER10[c][date][i]<0) n++;
+    for(let i=s0;i<=s1;i++){
+      if(SER10[c][date][i]>=0) continue;
+      let allDark=true;
+      for(const o of CAMS) if(SER10[o][date][i]>=0){allDark=false;break;}
+      if(!allDark) n++;                     /* server-down minutes are not this camera's fault */
+    }
     if(n>worstN){worstN=n;worst=c;}});
-  return {srvMin:srv*BUCKET, camMin:cam*BUCKET, worst, worstMin:worstN*BUCKET};
+  return {srvMin:srv*BUCKET, camMin:cam*BUCKET, camSlotMin:camSlots*BUCKET,
+          worst, worstMin:worstN*BUCKET};
 }
 function pageCoverage(){
   const d=S.date, v=el("div");
@@ -4564,8 +4599,8 @@ function pageCoverage(){
       tone:(()=>{const o=offStats(d);return o&&o.camMin>120?"crit":o&&o.camMin>30?"warn":"good";})(),
       chip:(()=>{const o=offStats(d);return o&&o.worst&&o.worstMin>0
         ?{t:"worst: "+SP[o.worst].short+" · "+fmt(o.worstMin)+" min",tone:"warn"}:null;})(),
-      foot:"single cameras dark while others streamed",
-      note:"Feed missing from one camera while the rest of the centre kept streaming — the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
+      foot:"minutes with some cameras dark while others streamed",
+      note:"Wall-clock minutes in which at least one camera was dark while the rest of the centre kept streaming — the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
     kcard({lbl:"Server-Off Minutes",src:"measured",
       val:(()=>{const o=offStats(d);return fmt(o?o.srvMin:0);})(),unit:"min",
       tone:(()=>{const o=offStats(d);return o&&o.srvMin>60?"crit":o&&o.srvMin>10?"warn":"good";})(),

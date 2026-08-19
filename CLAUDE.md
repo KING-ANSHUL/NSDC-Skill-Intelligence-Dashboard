@@ -60,3 +60,5 @@ This file is the shared memory between everyone working on this project through 
 Claude's actual conversation transcript lives only on the machine/account that ran it — it is not something git can or should sync (huge, includes internal tool-call noise, potentially sensitive). `SESSION_LOG.md` is the practical substitute: **every session that changes the dashboard appends a short entry** — what code changed, a 3-6 line summary of what was discussed/decided/rejected, and whether CLAUDE.md itself was touched. This is enforced by the same pre-commit hook and CI check described above.
 
 A `post-merge` git hook (also enabled by the one-time `core.hooksPath` setup) fires automatically right after `git pull` and prints the new SESSION_LOG.md entries plus a code diff stat — so pulling doesn't just bring new lines of HTML, it tells you the story behind them without you having to go looking.
+
+(test note: verifying the pre-commit hook and post-merge notification end-to-end.)

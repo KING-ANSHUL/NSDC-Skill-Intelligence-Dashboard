@@ -2087,7 +2087,7 @@ function tile(o){
 
 /* --- heatmap (sequential single hue) --- */
 function heat(o){
-  const {rows,cols,val,fmtV=v=>fmt(v),rowLab,colLab,unit=""}=o;
+  const {rows,cols,val,fmtV=v=>fmt(v),rowLab,colLab,unit="",colorOf}=o;
   if(!rows||!rows.length||!cols||!cols.length) return emptyViz(o.emptyNote);
   const flat=val.flat().filter(v=>v!=null);
   const mx=Math.max(...flat)||1,mn=Math.min(...flat);
@@ -2106,7 +2106,9 @@ function heat(o){
       }
       const t=(v-mn)/((mx-mn)||1);
       const idx=clamp(Math.floor(t*SEQ.length),0,SEQ.length-1);
-      const n=el("div",{class:"hm-c",style:`background:${SEQ[idx]};color:${idx>=4?"#fff":CSSV("--ink")}`,tabindex:"0",text:fmtV(v)});
+      const bg=colorOf?colorOf(v,ri):SEQ[idx];
+      const ink=colorOf?"#fff":(idx>=4?"#fff":CSSV("--ink"));
+      const n=el("div",{class:"hm-c",style:`background:${bg};color:${ink}`,tabindex:"0",text:fmtV(v)});
       hoverable(n,`<div class="hd">${rowLab?rowLab(r):r} · ${c}</div><div class="r"><i>${o.vlabel||"Value"}</i><span class="v">${fmtV(v)}${unit}</span></div>`);
       g.appendChild(n);
     });
@@ -4056,14 +4058,23 @@ function pageAttendance(){
       foot:"day on day"}),
   ]));
 
+  const actByDay=FEED_DATES.map(dd=>{
+    const rs=roomsIn().map(r=>D[dd][r]).filter(Boolean);
+    const tot=Math.max(1,rs.length*(DAY_TO-DAY_FROM));
+    return rs.reduce((a,r)=>a+(r.activeMin||0),0)/tot*100;
+  });
+  const lowDays=actByDay.filter(x=>x<40).length;
   v.appendChild(sec("Active Hours & Instructor Presence","camera · share of the observed day"));
   v.appendChild(kg(4,[
     kcard({lbl:"Active Time %",src:"measured",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pAct),tone:rygTone(pAct,75),
       tri:[{k:"Active",v:zAct,c:ST.good},{k:"Unsupervised",v:zUns,c:ST.warning},
            {k:"Idle",v:zIdl,c:CSSV("--rule")}],
-      chip:{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)},
-      note:"Share of the day a room had a cohort AND an instructor present together."}),
+      spark:{vals:actByDay,cur:FEED_DATES.indexOf(d),ref:75},
+      chip:lowDays>=3?{t:"low on "+lowDays+" of "+FEED_DATES.length+" days — pattern, act",tone:"crit"}
+          :(pAct<40?{t:"single-day dip — watch, don't act",tone:"warn"}
+                   :{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)}),
+      note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),
     kcard({lbl:"Unsupervised Time %",src:"measured",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pUns),tone:pUns>10?"crit":pUns>5?"warn":"good",
       meter:clamp(pUns,0,100),meterK:pUns>10?"crit":pUns>5?"warn":"ok",
@@ -4162,6 +4173,7 @@ function pageAttendance(){
           return rr&&rr.running?rr.avgIn:null;})),
         rowLab:r=>SP[r].short+(courseOf(r)?" · "+courseOf(r).code:""),
         fmtV:x=>fmt(x,1),vlabel:"Mean attendance",
+        colorOf:(v,ri)=>refCol(v,(courseOf(roomsIn()[ri])||{enrolled:20}).enrolled*0.75),
         nullNote:"Camera was recording. No cohort crossed the "+COHORT_THR+"-person threshold."}),
       ()=>mkTable(["Room",...FEED_DATES.map(x=>DAYLBL[x])],
         roomsIn().map(r=>[SP[r].short,...FEED_DATES.map(x=>{const rr=D[x][r];
@@ -4182,8 +4194,22 @@ function pageAttendance(){
   if(cur){
     const rr=D[d][cur], cc=courseOf(cur), cv=curveOf(cur,d,7*60,19*60,5);
     const mi=MI[d][cur];
+    const hourBand=(camId,date)=>{
+      const ser=SER10[camId]&&SER10[camId][date]; if(!ser) return [];
+      const out=[];
+      for(let h=7;h<19;h++){
+        let sum=0,n=0,pk=0;
+        for(let i=sl(h*60);i<sl((h+1)*60);i++){
+          const x=ser[i]; if(x<0) continue;
+          sum+=x/10; n++; if(x/10>pk) pk=x/10;
+        }
+        out.push({h:String(h).padStart(2,"0")+"–"+String(h+1).padStart(2,"0"),
+                  avg:n?sum/n:null, pk});
+      }
+      return out;
+    };
     v.appendChild(sec(SP[cur].name+(cc?" · "+cc.name:""),"selected space"));
-    v.appendChild(cgrid(1,[
+    v.appendChild(cgrid(2,[
       cx("Headcount Across the Instructional Day",null,
         W=>lines({W,xs:cv.lab,series:[{k:"Headcount",c:SER[0],v:cv.v}],
           area:true,markers:false,h:250,xEvery:10,fmtV:x=>fmt(x,1),
@@ -4191,10 +4217,24 @@ function pageAttendance(){
         ()=>mkTable(["Time","Headcount"],cv.lab.map((t,i)=>
           [t,cv.v[i]==null?"—":fmt(cv.v[i],1)]).filter((_,i)=>i%6===0)),
         "Six-minute means straight from the export. Gaps are hatched, never drawn as zero."),
+      cx("Candidates by Hour Band",null,
+        W=>{const hb=hourBand(cur,d).filter(b=>b.avg!=null);
+          if(!hb.length) return emptyViz("No feed on this day");
+          const pkAll=Math.max(...hb.map(b=>b.pk),1);
+          return bars({W,cats:hb.map(b=>b.h),v:hb.map(b=>b.avg),
+            fmtV:x=>fmt(x,1),max:niceMax(pkAll),vlabel:"Mean in band",minH:208,
+            statusOf:x=>refCol(x,pkAll*0.6),
+            threshold:pkAll,thresholdLabel:"day peak"});},
+        ()=>mkTable(["Hour","Mean","Peak in band"],
+          hourBand(cur,d).map(b=>[b.h,b.avg==null?"—":fmt(b.avg,1),fmt(b.pk,1)])),
+        "Candidates in the room per hour band against the day's peak — a morning spike that empties out after lunch shows up here immediately."),
     ]));
     v.appendChild(kg(4,[
       kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
-        foot:rr.peakMin!=null?"at "+hm(rr.peakMin):""}),
+        chip:(rr.avgIn&&rr.peak/rr.avgIn>1.8)
+          ?{t:"peak "+fmt(rr.peak/rr.avgIn,1)+"× the mean",tone:"warn"}:null,
+        foot:rr.peakMin!=null?"at "+hm(rr.peakMin):"",
+        note:"A peak far above the mean usually means a morning spike that emptied out — the hour bands beside this show exactly where."}),
       kcard({lbl:"First Cohort Detection",src:"measured",
         val:rr.firstMin!=null?hm(rr.firstMin):"never",
         tone:rr.running?null:"crit",
@@ -4303,7 +4343,7 @@ function pageQuality(){
       cx("Workstation Utilisation by Hour",null,
         ()=>heat({rows:Array.from({length:nSt},(_,i)=>i+1),cols:hrsR,val:zval,
           rowLab:r=>(SP[zid].type==="computer-lab"?"PC-":"ST-")+String(r).padStart(2,"0"),
-          fmtV:x=>fmt(x),unit:"%",vlabel:"Active share",
+          fmtV:x=>fmt(x),unit:"%",vlabel:"Active share",colorOf:v=>refCol(v,70),
           nullNote:"No reading for this station"}),null,
         "Which individual workbench or machine had somebody working at it, hour by hour. The 13:00 column drops to near zero — that is lunch."),
     ]));
@@ -4409,6 +4449,23 @@ function pageAssessment(){
 /* ================================================================
    PAGE 5 — COVERAGE  (feed integrity, all measured)
    ================================================================ */
+/* Splits missing feed into per-camera outages (server up, camera off) and
+   whole-centre outages (server down) inside the covered window of a day. */
+function offStats(date){
+  const win=PARTIAL[date]; if(!win) return null;
+  const s0=sl(win.from), s1=sl(win.to);
+  let srv=0, cam=0;
+  for(let i=s0;i<=s1;i++){
+    let down=0;
+    for(const c of CAMS) if(SER10[c][date][i]<0) down++;
+    if(down===CAMS.length) srv++; else cam+=down;
+  }
+  let worst=null, worstN=0;
+  CAMS.forEach(c=>{let n=0;
+    for(let i=s0;i<=s1;i++) if(SER10[c][date][i]<0) n++;
+    if(n>worstN){worstN=n;worst=c;}});
+  return {srvMin:srv*BUCKET, camMin:cam*BUCKET, worst, worstMin:worstN*BUCKET};
+}
 function pageCoverage(){
   const d=S.date, v=el("div");
   const spacesIn=SPACES.filter(s=>!S.centre||s.centre===S.centre);
@@ -4438,6 +4495,22 @@ function pageCoverage(){
       chip:{t:fmt(totalGap)+" dropped mid-window",tone:totalGap>30?"warn":"n"},
       foot:"07:00–19:00, all cameras",
       note:"Every minute of the teaching day with no row at all — held as unknown, never counted as an empty room."}),
+    kcard({lbl:"Camera-Off Minutes",src:"measured",
+      cam:{space:busiestRoom(),signal:"feed"},
+      val:(()=>{const o=offStats(d);return fmt(o?o.camMin:0);})(),unit:"min",
+      tone:(()=>{const o=offStats(d);return o&&o.camMin>120?"crit":o&&o.camMin>30?"warn":"good";})(),
+      chip:(()=>{const o=offStats(d);return o&&o.worst&&o.worstMin>0
+        ?{t:"worst: "+SP[o.worst].short+" · "+fmt(o.worstMin)+" min",tone:"warn"}:null;})(),
+      foot:"single cameras dark while others streamed",
+      note:"Feed missing from one camera while the rest of the centre kept streaming — the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
+    kcard({lbl:"Server-Off Minutes",src:"measured",
+      val:(()=>{const o=offStats(d);return fmt(o?o.srvMin:0);})(),unit:"min",
+      tone:(()=>{const o=offStats(d);return o&&o.srvMin>60?"crit":o&&o.srvMin>10?"warn":"good";})(),
+      chip:(()=>{const n=FEED_DATES.filter(x=>{const o=offStats(x);return o&&o.srvMin>10;}).length;
+        return {t:n+" of "+FEED_DATES.length+" days — "+(n>=3?"pattern":"isolated"),
+                tone:n>=3?"crit":"ok"};})(),
+      foot:"every camera dark at once",
+      note:"All cameras missing simultaneously — the recording server (or power) was down, not one camera. A repeated pattern here is a non-compliance finding to report."}),
     kcard({lbl:"Overnight Baseline Reading",src:"measured",val:fmt(nightAvg,2),unit:"persons",
       chip:{t:"peak "+fmt(nightMax,1),tone:"n"},
       foot:"21:00–06:00, all cameras",

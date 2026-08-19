@@ -1,0 +1,9 @@
+# scratch/backup files from iterative edits
+backup_*.html
+bk_*.html
+*.pyc
+__pycache__/
+_*.py
+_*.svg
+_*.json
+.claude/scheduled_tasks.lock

@@ -1615,6 +1615,63 @@ FEED_DATES.forEach(d=>{AEBAS[d]={};COURSES.forEach(c=>{
 });});
 
 /* ================================================================
+   4b · "All days" aggregate — synthetic date key "ALL"
+   Peak here is the AVERAGE of the daily peaks (the aggregation the
+   review meeting asked for), never a re-computed instantaneous max.
+   ================================================================ */
+const ALLD="ALL";
+(function(){
+  CAMS.concat(COMMON).forEach(c=>{ if(!SER10[c]) return;
+    const out=new Int16Array(SLOTS);
+    for(let i=0;i<SLOTS;i++){
+      let sum=0,n=0;
+      FEED_DATES.forEach(d=>{const v=SER10[c][d]&&SER10[c][d][i];
+        if(v!=null&&v>=0){sum+=v;n++;}});
+      out[i]=n?Math.round(sum/n):-1;
+    }
+    SER10[c][ALLD]=out;
+  });
+  PARTIAL[ALLD]={from:Math.min(...FEED_DATES.map(d=>PARTIAL[d].from)),
+                 to:Math.max(...FEED_DATES.map(d=>PARTIAL[d].to)),full:false};
+  Object.keys(COV).forEach(c=>{ if(!COV[c]) return;
+    const f=Math.min(...FEED_DATES.map(d=>COV[c][d]?COV[c][d][0]:1e9));
+    const t=Math.max(...FEED_DATES.map(d=>COV[c][d]?COV[c][d][1]:-1));
+    if(t>=0) COV[c][ALLD]=[f,t]; });
+  Object.keys(FEEDMETA).forEach(c=>{
+    FEEDMETA[c][ALLD]={
+      slots:Math.round(avg(FEED_DATES.map(d=>FEEDMETA[c][d]?FEEDMETA[c][d].slots:0))),
+      gaps:FEED_DATES.reduce((a,d)=>a+(FEEDMETA[c][d]?FEEDMETA[c][d].gaps:0),0)};
+  });
+  D[ALLD]={};
+  /* the instructor-model strip has no meaningful average — the All-days
+     presence strip shows the latest day and says so via DAYLBL */
+  MI[ALLD]=MI[FEED_DATES[FEED_DATES.length-1]];
+  ROOMS.concat(COMMON).forEach(r=>{
+    const recs=FEED_DATES.map(d=>D[d][r]).filter(Boolean);
+    if(!recs.length) return;
+    const o={cam:r};
+    /* average every numeric field generically — a hand-written field list
+       silently breaks any page that reads a field the list forgot */
+    Object.keys(recs[0]).forEach(k=>{
+      const vs=recs.map(x=>x[k]).filter(v=>typeof v==="number"&&isFinite(v));
+      if(vs.length) o[k]=avg(vs);
+    });
+    o.running=recs.some(x=>x.running);
+    /* the coverage page reads r.cov — union the daily windows */
+    const wins=recs.map(x=>x.cov).filter(w=>Array.isArray(w)&&w.length===2);
+    o.cov=wins.length?[Math.min.apply(null,wins.map(w=>w[0])),
+                       Math.max.apply(null,wins.map(w=>w[1]))]:[0,0];
+    const fm=recs.map(x=>x.firstMin).filter(v=>typeof v==="number");
+    o.firstMin=fm.length?Math.min.apply(null,fm):null;
+    o.peakMin=null;            // an averaged peak has no single minute
+    D[ALLD][r]=o;
+  });
+  AEBAS[ALLD]={};
+  COURSES.forEach(c=>{AEBAS[ALLD][c.code]=
+    Math.round(avg(FEED_DATES.map(d=>AEBAS[d][c.code])));});
+})();
+
+/* ================================================================
    5b · state — declared before anything reads it
    ================================================================ */
 const S={tab:"overview",date:FEED_DATES[FEED_DATES.length-1],centre:"",
@@ -3276,6 +3333,9 @@ function buildCameraPanel(opt){
 const DAYLBL={};FEED_DATES.forEach(d=>{
   DAYLBL[d]=new Date(d+"T00:00:00").toLocaleDateString("en-GB",
     {weekday:"short",day:"2-digit",month:"short"});});
+/* the aggregate key is built back in section 4b, but DAYLBL only exists here */
+DAYLBL[ALLD]="All days · "+DAYLBL[FEED_DATES[0]].replace(/^\w+ /,"")+
+  " – "+DAYLBL[FEED_DATES[FEED_DATES.length-1]].replace(/^\w+ /,"");
 
 /* red -> green scoring against a reference. Carried over from the first
    NSDC prototype, where it was doing the work three sentences do here. */
@@ -3366,7 +3426,7 @@ function kcard(o){
   if(o.cam&&SP[o.cam.space]&&S.geo.lvl==="ctr"){
     const b=el("button",{class:"kc-cam","aria-expanded":"false",
       title:"Open the camera this figure is measured from"},
-      [el("i"),el("span",{text:"Live view"})]);
+      [el("i"),el("span",{text:"Camera Signals"})]);
     b.addEventListener("click",ev=>{ev.stopPropagation();openCamDrawer(b,o);});
     f.appendChild(b);
   }
@@ -3550,7 +3610,7 @@ function indiaMap(){
     });
   }
   stage.appendChild(svg);
-  stage.appendChild(el("div",{class:"mp-badge"},[el("i"),document.createTextNode("Live intel")]));
+  stage.appendChild(el("div",{class:"mp-badge"},[el("i"),document.createTextNode("Historical · to T−1")]));
   stage.appendChild(el("div",{class:"mp-count",
     text:zoomSt?((ST_LIST[zoomSt]||[]).length+" centres · "+
         new Set((ST_LIST[zoomSt]||[]).map(c=>c.district)).size+" districts")
@@ -3607,7 +3667,10 @@ function mapRail(){
       ["Spaces under camera",fmt(a.watched)+" of "+fmt(a.spaces),
         a.watched/a.spaces>=0.9?"ok":a.watched/a.spaces>=0.7?"warn":"crit"],
       ["Centres in scope",fmt(a.n),"ok"],
-      ["Learners enrolled",inr(a.enrolled),"ok"]
+      ["Learners enrolled",inr(a.enrolled),"ok"],
+      /* number of trades running across the centres in scope — a 5-trade
+         centre contributes 5. Not an activity measure. */
+      ["Ongoing trainings",fmt(scopeList().reduce((t,c)=>t+c.trades.length,0)),"ok"]
     ].map(r=>el("div",{class:"cov-r"},[
       el("i",{class:"t-"+r[2]}),el("u",{text:r[0]}),el("b",{text:r[1]})]))
   )]));
@@ -4592,6 +4655,7 @@ const dSel=document.getElementById("fDay"),
       sSel=document.getElementById("fSpace");
 FEED_DATES.forEach(d=>dSel.appendChild(el("option",{value:d,
   text:DAYLBL[d]+(PARTIAL[d]&&!PARTIAL[d].full?" · partial":"")})));
+dSel.appendChild(el("option",{value:ALLD,text:DAYLBL[ALLD]}));
 dSel.value=S.date;
 
 function fillSpaces(){

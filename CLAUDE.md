@@ -10,8 +10,7 @@ Everything in this dashboard is tagged by provenance: **Measured** (camera) / **
 
 ## Files
 
-- `NSDC_Skill_Intelligence_Dashboard.html` — the current deliverable. Single self-contained file, vanilla JS, hand-rolled SVG charts, no build step, no external assets. Opens directly via `file://` or the local server.
-- `NSDC_Skill_Intelligence_Prototype.html` — an earlier prototype, kept for reference only.
+- `NSDC_Skill_Intelligence_Dashboard.html` — the only deliverable. Single self-contained file, vanilla JS, hand-rolled SVG charts, no build step, no external assets. Opens directly via `file://` or the local server.
 - `.claude/launch.json` — serves this directory on `http://localhost:8731` (`python -m http.server`), needed because Playwright/browser tooling can't hit `file://` directly.
 
 ## Data sources baked into the dashboard

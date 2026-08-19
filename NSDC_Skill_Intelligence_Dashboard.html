@@ -71,8 +71,8 @@ body{
 
 /* ---------- masthead ---------- */
 .masthead{
-  display:flex;align-items:center;gap:12px;
-  padding:7px 18px;background:var(--surface);
+  display:flex;align-items:center;gap:10px;
+  padding:7px 16px;background:var(--surface);
   border-bottom:1px solid var(--rule);flex-wrap:nowrap;overflow:hidden;
 }
 .mh-lockup{display:flex;align-items:center;gap:14px;text-decoration:none;flex:none}
@@ -84,9 +84,17 @@ body{
 .mh-title{display:flex;flex-direction:column;gap:0;min-width:0;flex:none}
 .mh-title b{font-size:13.5px;font-weight:680;letter-spacing:-.005em;white-space:nowrap}
 .mh-title span{font-size:10px;color:var(--muted);white-space:nowrap}
-@media(max-width:1500px){.mh-title span{display:none}}
+@media(max-width:1700px){.mh-title span{display:none}}
 .mh-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex:none}
-@media(max-width:1180px){.masthead .skey{display:none}}
+/* the stat strip repeats what the map panel already prints, so it is what
+   gives way once identity + scope + controls have taken their room */
+@media(max-width:1900px){.mstat>div:nth-child(1),.mstat>div:nth-child(2){display:none}}
+@media(max-width:1600px){.mh-right .mh-div,.mstat{display:none}}
+/* a long centre name must not push the controls off the row */
+.crumb{max-width:24ch;overflow:hidden}
+.crumb span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fSpace{max-width:190px}
+#fDay{max-width:150px}
 @media(max-width:1240px){.mh-msde,.mh-sep{display:none}}
 .clock{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .clock b{font-weight:650;color:var(--ink)}
@@ -106,7 +114,8 @@ body{
   background:var(--surface-2);border-bottom:1px solid var(--hair);
   padding:0 22px;flex-wrap:wrap;
 }
-.f-cell{display:flex;align-items:center;gap:7px;flex:none}
+.f-cell{display:flex;align-items:center;gap:6px;flex:none;min-width:0}
+.f-cell label{white-space:nowrap}
 .f-cell label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;font-weight:650;color:var(--muted)}
 select{
   font-family:inherit;font-size:12px;color:var(--ink);
@@ -134,7 +143,14 @@ svg.viz [tabindex]:focus-visible{outline:2px solid var(--ink);outline-offset:2px
 .ghost[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ---------- tabs ---------- */
-.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--rule);padding:0 22px;overflow-x:auto}
+.tabrow{display:flex;align-items:center;gap:18px;background:var(--surface);
+  border-bottom:1px solid var(--rule);padding:0 22px}
+.tabs{display:flex;background:none;border-bottom:0;padding:0;overflow-x:auto;flex:1;min-width:0}
+/* the provenance key is the only thing that decodes the dot on every card, so
+   it lives where there is permanent room for it rather than in the masthead,
+   which overflows at presentation width */
+.tabrow .skey{margin-left:auto;flex:none}
+@media(max-width:900px){.tabrow .skey{display:none}}
 .tab{
   font-family:inherit;font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:650;
   color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;
@@ -258,6 +274,9 @@ table.dv th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color
 .hud-room{font-size:10.5px;letter-spacing:.06em;color:var(--vid-muted);text-transform:uppercase}
 .rec{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;letter-spacing:.11em;color:#ff6a6a}
 .rec b{width:6px;height:6px;border-radius:50%;background:#ff4d4d;animation:blink 1.6s steps(1,end) infinite}
+/* a replay of a recorded export must not wear the visual grammar of a live
+   recording — no pulsing red dot */
+.rec.replay b{background:#7aa7d4;animation:none}
 @keyframes blink{0%,60%{opacity:1}61%,100%{opacity:.15}}
 .hud-ts{font-size:10.5px;color:var(--vid-ink);letter-spacing:.04em}
 .hud-stat{display:flex;align-items:center;gap:6px;background:rgba(6,11,17,.72);border:1px solid #22303f;padding:4px 8px;border-radius:2px}
@@ -995,12 +1014,6 @@ body.focus-measured .allmod b{font-weight:680}
   <div class="f-cell" id="cellDay"><label for="fDay">Day</label><select id="fDay"></select></div>
   <div class="f-cell" id="cellSpace"><label for="fSpace">Space</label><select id="fSpace"></select></div>
   <div class="mh-right">
-    <span class="skey">
-      <i><span class="sd sd-measured"></span>camera</i>
-      <i><span class="sd sd-declared"></span>declared</i>
-      <i><span class="sd sd-biometric"></span>biometric</i>
-      <i><span class="sd sd-modelled"></span>proposed</i>
-    </span>
     <button class="ghost" id="btnMeasured" aria-pressed="false">Measured</button>
     <button class="ghost" id="btnTables" aria-pressed="false">Table</button>
     <div class="mh-div"></div>
@@ -1008,7 +1021,15 @@ body.focus-measured .allmod b{font-weight:680}
   </div>
 </header>
 
-<nav class="tabs" role="tablist" id="tabs"></nav>
+<div class="tabrow">
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <span class="skey" aria-label="What the dot on each figure means">
+    <i><span class="sd sd-measured"></span>camera</i>
+    <i><span class="sd sd-declared"></span>declared</i>
+    <i><span class="sd sd-biometric"></span>biometric</i>
+    <i><span class="sd sd-modelled"></span>proposed</i>
+  </span>
+</div>
 
 <main id="view" role="tabpanel" tabindex="0"></main>
 <div id="tip" role="status" aria-live="polite"></div>
@@ -1086,9 +1107,10 @@ const PROV={
    courses in the KPI spec, and the centre totals match the spec's
    worked example (135 of 165 = 82%). Enrolment sits above each
    camera's busiest 2-minute MEAN. It does not always sit above the
-   raw per-frame count_max in the export (FIT 31 > 26, ELE 30 > 27,
-   CPA 34 > 28), so a peak-vs-roll ratio can exceed 100% if the peak
-   is ever recomputed from count_max instead.
+   raw per-frame count_max in the export. After the 2026-08-19 batch-size
+   revision only FIT is still at risk (count_max 31 > enrolled 26); ELE
+   (30 vs 31) and CPA (34 vs 34) now clear it. A peak-vs-roll ratio can
+   still exceed 100% for FIT if the peak is ever recomputed from count_max.
    ================================================================ */
 const CENTRES=[
   {id:"gn",   name:"NSDC ITC, Greater Noida", short:"Greater Noida", district:"Gautam Buddh Nagar, UP",
@@ -1122,7 +1144,9 @@ const centresIn=()=>CENTRES.filter(c=>!S.centre||c.id===S.centre);
 
 /* nothing-ran and zero-students must never print the same */
 const orDash=(v,f)=>v==null?"—":(f?f(v):String(v));
-const camLabel=id=>"CAM-"+String(id.replace("cam-","")).padStart(2,"0");
+const camLabel=id=>id&&id.indexOf("cam-")===0
+  ? "CAM-"+String(id.replace("cam-","")).padStart(2,"0")
+  : "no camera";
 const CAMS=SPACES.filter(s=>s.id.startsWith("cam-")).map(s=>s.id);
 const ROOMS=SPACES.filter(s=>s.role==="classroom").map(s=>s.id);
 const COMMON=SPACES.filter(s=>s.role==="corridor"||s.role==="open").map(s=>s.id);
@@ -1137,8 +1161,8 @@ const COURSES=[
 ];
 const CO=Object.fromEntries(COURSES.map(c=>[c.code,c]));
 const courseOf=id=>SP[id]&&SP[id].course?CO[SP[id].course]:null;
-const totEnrolled=COURSES.reduce((a,c)=>a+c.enrolled,0);      // 135
-const totSanctioned=COURSES.reduce((a,c)=>a+c.sanctioned,0);  // 165
+const totEnrolled=COURSES.reduce((a,c)=>a+c.enrolled,0);      // 165
+const totSanctioned=COURSES.reduce((a,c)=>a+c.sanctioned,0);  // 215
 
 /* ---------------------------------------------------------------
    TRADE RECOGNITION — modelled
@@ -1428,7 +1452,7 @@ function funnelOf(a){
     {k:"Camera-Verified Present",  v:present,   s:"measured",note:"Observed in frame in at least one session"},
     {k:"Attendance Threshold Met", v:thresh,    s:"measured",note:"70% of scheduled learner-minutes observed"},
     {k:"Equipment-Active Session", v:concord, s:"modelled",note:"Machinery showed detected activity during the session"},
-    {k:"Assessment Attendance",    v:assessed,  s:"measured",note:"Detected present on assessment day"},
+    {k:"Assessment Attendance",    v:assessed,  s:"modelled",note:"Detected present on assessment day — proposed detector"},
     {k:"Certified",                v:certified, s:"declared",note:"Awarding body record"}
   ];
 }
@@ -1483,6 +1507,10 @@ function deriveDay(camId,date){
     /* the export does not cover every scheduled minute on a partial day, so
        "delivered vs scheduled" has to divide by the scheduled time actually
        observable — otherwise a short export reads as a delivery collapse */
+    /* NOTE: committedCoveredMin is retained for the feed-coverage shortfall
+       figure only. It must never become the denominator of a delivery KPI —
+       it is derived from the declared daily start time, which a centre can
+       move to repair its own score. See the two-source rule in CLAUDE.md. */
     committedCoveredMin:(()=>{
       if(!c) return 0;
       let n=0;
@@ -3074,7 +3102,7 @@ function buildCameraPanel(opt){
         hBL=el("div",{class:"hud-bl"}),hBR=el("div",{class:"hud-br"});
   const idEl=el("span",{class:"hud-id"}),roomEl=el("span",{class:"hud-room"});
   hTL.append(idEl,roomEl);
-  const recEl=el("span",{class:"rec",html:'<b></b>PLAY'});
+  const recEl=el("span",{class:"rec replay",html:'<b></b>REPLAY'});
   const tsEl=el("span",{class:"hud-ts"});
   hTR.append(recEl,tsEl);
   const mk=u=>el("div",{class:"hud-stat"},[el("u",{text:u}),el("s",{text:"—"})]);
@@ -3278,7 +3306,7 @@ function buildCameraPanel(opt){
     idEl.textContent=camLabel(fid);
     roomEl.textContent="· "+sp.name+(courseOf(fid)?" · "+courseOf(fid).name:" · "+sp.type);
     tsEl.textContent=hm(head)+"  "+date.split("-").reverse().join("/");
-    recEl.innerHTML=(playing?'<b></b>PLAY':'<b style="animation:none;opacity:.5"></b>PAUSED');
+    recEl.innerHTML=(playing?'<b></b>REPLAY':'<b style="animation:none;opacity:.5"></b>PAUSED');
     const occ=occAt(fid,date,head);
     sHead.querySelector("s").textContent=occ===null?"no feed":fmt(occ,1);
     sSrc.querySelector("s").textContent=occ===null?"—":"export";
@@ -3714,7 +3742,7 @@ function funnelPanel(){
   const p=el("div",{class:"panel"});
   p.appendChild(el("div",{class:"panel-h"},[
     el("b",{text:"Verification Funnel"}),
-    el("em",{text:scopeLabel()+" · share of enrolled surviving each check"})]));
+      el("em",{text:scopeLabel()+" · share of the enrolled cohort surviving each check"})]));
   const box=el("div",{class:"fun"});
   rows.forEach((r,i)=>{
     const share=r.v/top*100, drop=i?(rows[i-1].v-r.v)/(rows[i-1].v||1)*100:0;
@@ -3727,7 +3755,7 @@ function funnelPanel(){
       el("div",{class:"fun-s"},[srcDot(r.s),document.createTextNode(r.note),
         i?el("span",{class:"fun-d",text:"▼ "+pc(drop)}):null].filter(Boolean))]);
     hoverable(row,'<div class="hd">'+r.k+'</div>'+r.note+
-      "<br>"+fmt(Math.round(r.v))+" learners · "+pc(share)+" of enrolled");
+      "<br>"+fmt(Math.round(r.v))+" learners · "+pc(share)+" of the enrolled cohort");
     box.appendChild(row);
   });
   p.appendChild(box);
@@ -3964,7 +3992,7 @@ function pageCentreOverview(){
         seenTxt:fmt(R.activeHours,1)+"h",decTxt:fmt(R.committedHours,1)+"h committed"},
       chip:R.committedHours?{t:pc(R.activeHours/R.committedHours*100)+" of committed hours",
                              tone:rygTone(R.activeHours/R.committedHours*100,75)}:null,
-      note:"Hours a cohort and an instructor were both present, against the hours per day committed at accreditation. Deliberately NOT compared against a declared daily timetable — a centre that shifts its own schedule must not be able to repair its own score."}),
+      note:"Hours a cohort was present in the room, against the hours per day committed at accreditation. Instructor presence is a separate, modelled figure — this one is pure camera occupancy. Deliberately NOT compared against a declared daily timetable: a centre that shifts its own schedule must not be able to repair its own score."}),
   ]));
 
   v.appendChild(sec("Center Identity & Permitted Sectors","declared at accreditation"));
@@ -4091,7 +4119,11 @@ function pageAttendance(){
   const totEnr=enr.reduce((a,b)=>a+b,0), totAeb=aeb.reduce((a,b)=>a+b,0),
         totCam=cam.reduce((a,b)=>a+b,0);
 
-  const durs=live.map(r=>D[d][r].durNoLunch!=null?D[d][r].durNoLunch:D[d][r].presentMin);
+  /* durNoLunch was read but never produced — subtract the lunch window from
+     the measured presence so the figure matches the caption beside it */
+  const durs=live.map(r=>{
+    const rr=D[d][r], lunch=Math.max(0,LUNCH[1]-LUNCH[0]);
+    return Math.max(0,(rr.presentMin||0)-(rr.running?lunch:0));});
   const avgDur=durs.length?avg(durs)/60:null;
 
   /* ---- Active Hours & Instructor Presence (register Page 2) ---- */
@@ -4187,7 +4219,7 @@ function pageAttendance(){
         seenTxt:actTrainers+" detected",decTxt:cmtTrainers+" scheduled"},
       chip:actTrainers<cmtTrainers?{t:(cmtTrainers-actTrainers)+" not detected",tone:"crit"}
                                   :{t:"all detected",tone:"ok"},
-      note:"Trainers who should be on-site at a given time, based on how many courses are scheduled then, against the trainers the camera feed detects."}),
+      note:"Trainers the centre committed to at accreditation — one per sanctioned course — against the trainers the camera feed detects. Not read from a daily timetable."}),
   ]));
 
   v.appendChild(sec("Triangulated Attendance","register · biometric · camera"));
@@ -4278,7 +4310,7 @@ function pageAttendance(){
           sum+=x/10; n++; if(x/10>pk) pk=x/10;
         }
         out.push({h:String(h).padStart(2,"0")+"–"+String(h+1).padStart(2,"0"),
-                  avg:n?sum/n:null, pk});
+                  avg:n?sum/n:null, pk:n?pk:null});
       }
       return out;
     };
@@ -4292,16 +4324,19 @@ function pageAttendance(){
           [t,cv.v[i]==null?"—":fmt(cv.v[i],1)]).filter((_,i)=>i%6===0)),
         "Six-minute means straight from the export. Gaps are hatched, never drawn as zero."),
       cx("Candidates by Hour Band",null,
-        W=>{const hb=hourBand(cur,d).filter(b=>b.avg!=null);
-          if(!hb.length) return emptyViz("No feed on this day");
-          const pkAll=Math.max(...hb.map(b=>b.pk),1);
+        W=>{const hb=hourBand(cur,d);
+          if(!hb.some(b=>b.avg!=null)) return emptyViz("No feed on this day");
+          /* keep unmeasured bands on the axis as nulls — dropping them made a
+             partial export look like a full day that simply started late */
+          const ref=rr.peak||Math.max.apply(null,hb.map(b=>b.pk||0).concat([1]));
           return bars({W,cats:hb.map(b=>b.h),v:hb.map(b=>b.avg),
-            fmtV:x=>fmt(x,1),max:niceMax(pkAll),vlabel:"Mean in band",minH:208,
-            statusOf:x=>refCol(x,pkAll*0.6),
-            threshold:pkAll,thresholdLabel:"day peak"});},
+            fmtV:x=>x==null?"no feed":fmt(x,1),max:niceMax(ref),vlabel:"Mean in band",minH:208,
+            statusOf:x=>x==null?CSSV("--hair"):refCol(x,ref*0.6),
+            threshold:ref,thresholdLabel:"day peak"});},
         ()=>mkTable(["Hour","Mean","Peak in band"],
-          hourBand(cur,d).map(b=>[b.h,b.avg==null?"—":fmt(b.avg,1),fmt(b.pk,1)])),
-        "Candidates in the room per hour band against the day's peak — a morning spike that empties out after lunch shows up here immediately."),
+          hourBand(cur,d).map(b=>[b.h,b.avg==null?"—":fmt(b.avg,1),
+                                  b.pk==null?"—":fmt(b.pk,1)])),
+        "Candidates in the room per hour band against the day's peak. Bands with no feed are shown empty, never as zero — a partial export must not read as an empty classroom."),
     ]));
     v.appendChild(kg(4,[
       kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
@@ -4465,8 +4500,6 @@ function pageAssessment(){
       tone:rygTone(totV/totP*100,90),
       meter:totV/totP*100,meterK:totV/totP>=.9?"ok":"warn",
       foot:"Five minutes or longer counts as complete"}),
-    kcard({lbl:"Average Viva Duration",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:fmt(avg(A.map(a=>a.vivaAvg)),1),unit:"min",
-      foot:"Per detected viva"}),
   ]));
 
   AR.push(sec("Proctoring Integrity Signals"));
@@ -4500,7 +4533,8 @@ function pageAssessment(){
     kcard({lbl:"Theory Duration",src:"modelled",
       val:fmt(avg(A.map(a=>a.theoryDur)),0),unit:"min",
       foot:"pen-and-paper round"}),
-    kcard({lbl:"Viva Duration",src:"modelled",
+    kcard({lbl:"Average Viva Duration",src:"modelled",
+      cam:{space:"nc-1",signal:"viva",cap:22},
       val:fmt(avg(A.map(a=>a.vivaAvg)),1),unit:"min",
       foot:"per detected candidate-assessor pair"}),
     kcard({lbl:"Practical Duration",src:"modelled",
@@ -4572,7 +4606,13 @@ function pageCoverage(){
   const totalNoData=rows.reduce((a,r)=>a+r.noDataMin,0);
   const p=PARTIAL[d];
   const nightAvg=avg(rows.map(r=>r.nightAvg).filter(x=>x!=null));
-  const nightMax=Math.max(...rows.map(r=>r.nightMax));
+  /* on ALL, r.nightMax is already a mean of daily maxima, so max-of-means
+     would understate the detector's own false-positive ceiling. Take the
+     true worst reading across the real days instead. */
+  const nightMax=S.date===ALLD
+    ? Math.max.apply(null,FEED_DATES.flatMap(dd=>
+        rows.map(r=>(D[dd][r.cam]||{}).nightMax||0)))
+    : Math.max.apply(null,rows.map(r=>r.nightMax));
   const uncovered=spacesIn.filter(s=>s.role==="uncovered");
   const cRooms=COMMON.filter(c=>D[d][c]&&inCentre(c));
 

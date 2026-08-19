@@ -7,3 +7,5 @@ _*.py
 _*.svg
 _*.json
 .claude/scheduled_tasks.lock
+.playwright-mcp/
+*.png

@@ -19,10 +19,13 @@
 - Reviewer's "slide" for the Overview: **ignore it**; only the spoken "ongoing trainings" count goes in.
 - Three exam types: practical (machine), computer-based (desktop), theory (pen-and-paper). Do **not** split assessments into sections yet.
 - **Candidate-to-Assessor Ratio: dropped.** Head-to-Machine (practical): removed outright, replaced by nothing.
-- Two-source rule is absolute: no KPI may depend on centre-supplied timetables/batch timings. Committed Training Hours stays (it is accreditation-time declared commitment, not a daily timetable) — flagged as a clarifying question below in case that reading is wrong.
+- Two-source rule is absolute: no KPI may depend on centre-supplied timetables/batch timings. **Confirmed:** Committed Training Hours stays, along with its committed-versus-detected comparison on the same card (mock data kept relevant and realistic — the detected side comes from the real camera activity minutes).
 - Historical T-1 mode only: the dashboard renders data up to the previous day; nothing claims to be live. This mockup stays completely separate from the old live dashboard.
-- Multi-date: build an "All days" aggregate view; every KPI/visualization must also work per single date.
+- Multi-date: build an "All days" aggregate view; every KPI/visualization must also work per single date. **Confirmed:** no arbitrary-subset selection — "All days" plus each individual day is the full scope.
 - RYG thresholds: not defined by the business yet — chosen here for meaningfulness (documented per chart).
+- **Confirmed:** the per-KPI camera button is named **"Camera Signals"** (not "Live view" / "Camera replay").
+- **Confirmed:** "Ongoing trainings" = the number of trades running in an institute (5 trades = 5 ongoing trainings). It is NOT derived from active time — active classes is a different concept that already exists as "Active Classrooms".
+- **Confirmed:** Theory Duration is measured from camera occupancy of the exam session — the hall camera watches a pen-and-paper exam the same way.
 
 ---
 
@@ -244,7 +247,7 @@ rep('''      tone:maxPos>1.05?"crit":"good",
     '''      tone:maxPos>1.2?"crit":"good",
       cmp:{seen:maxPos,declared:1,seenTxt:fmt(maxPos,2),decTxt:"1.00 expected"},
       chip:maxPos>1.2?{t:"would flag — possible sharing",tone:"crit"}
-           :maxPos>1.02?{t:"\≈1 \· assessor at a screen",tone:"ok"}
+           :maxPos>1.02?{t:"≈1 · assessor at a screen",tone:"ok"}
            :{t:"within expectation",tone:"ok"},
       note:"More than one person at a single computer during a scored exam. Benchmark is 1.2 — a reading around 1.1 is usually the assessor pausing behind a screen while walking the room, not sharing."}),''')
 
@@ -271,7 +274,7 @@ open(F, 'w', encoding='utf-8').write(s)
 print("q3 ok — bytes", len(s))
 ```
 
-Note: the `\—`/`\≈`/`\·` escapes above are for the *Python source*; if the anchor for Head-to-Machine fails on the em-dash, print the live block (`sed -n '4350,4362p'`) and paste the exact text — the em-dash in `val:maxH2M==null?"—"` is a literal — character in the file.
+Note: the `—`/`≈`/`·` escapes above are for the *Python source*; if the anchor for Head-to-Machine fails on the em-dash, print the live block (`sed -n '4350,4362p'`) and paste the exact text — the em-dash in `val:maxH2M==null?"—"` is a literal — character in the file.
 
 - [ ] **Step 3: Verify**
 
@@ -355,7 +358,7 @@ rep('''    kcard({lbl:"Classroom Interactivity Ratio",src:"modelled",''',
       tone:"warn",
       chip:{t:"1 welding booth not sighted",tone:"warn"},
       foot:"committed assets visible in frame",
-      note:"Is the committed asset physically present and visible \— a readiness check, not a utilisation rate. Some assets are legitimately unused in a given lesson (a GDA bed during dummy practice), so utilisation would mislead; presence cannot."}),
+      note:"Is the committed asset physically present and visible — a readiness check, not a utilisation rate. Some assets are legitimately unused in a given lesson (a GDA bed during dummy practice), so utilisation would mislead; presence cannot."}),
     kcard({lbl:"Classroom Interactivity Ratio",src:"modelled",''')
 
 open(F, 'w', encoding='utf-8').write(s)
@@ -449,7 +452,7 @@ def rep(a, b, n=1):
     s = s.replace(a, b)
 
 # --- hour-band aggregation straight from the real per-2-minute series ---
-rep('''    v.appendChild(sec(SP[cur].name+(cc?" \· "+cc.name:""),"selected space"));''',
+rep('''    v.appendChild(sec(SP[cur].name+(cc?" · "+cc.name:""),"selected space"));''',
     '''    const hourBand=(camId,date)=>{
       const ser=SER10[camId]&&SER10[camId][date]; if(!ser) return [];
       const out=[];
@@ -459,12 +462,12 @@ rep('''    v.appendChild(sec(SP[cur].name+(cc?" \· "+cc.name:""),"selected spac
           const x=ser[i]; if(x<0) continue;
           sum+=x/10; n++; if(x/10>pk) pk=x/10;
         }
-        out.push({h:String(h).padStart(2,"0")+"\–"+String(h+1).padStart(2,"0"),
+        out.push({h:String(h).padStart(2,"0")+"–"+String(h+1).padStart(2,"0"),
                   avg:n?sum/n:null, pk});
       }
       return out;
     };
-    v.appendChild(sec(SP[cur].name+(cc?" \· "+cc.name:""),"selected space"));''')
+    v.appendChild(sec(SP[cur].name+(cc?" · "+cc.name:""),"selected space"));''')
 
 # --- the headcount line gets the hour-band bars beside it ---
 rep('''    v.appendChild(cgrid(1,[
@@ -483,8 +486,8 @@ rep('''        "Six-minute means straight from the export. Gaps are hatched, nev
             statusOf:x=>refCol(x,pkAll*0.6),
             threshold:pkAll,thresholdLabel:"day peak"});},
         ()=>mkTable(["Hour","Mean","Peak in band"],
-          hourBand(cur,d).map(b=>[b.h,b.avg==null?"\—":fmt(b.avg,1),fmt(b.pk,1)])),
-        "Candidates in the room per hour band against the day's peak \— a morning spike that empties out after lunch shows up here immediately."),
+          hourBand(cur,d).map(b=>[b.h,b.avg==null?"—":fmt(b.avg,1),fmt(b.pk,1)])),
+        "Candidates in the room per hour band against the day's peak — a morning spike that empties out after lunch shows up here immediately."),
     ]));''')
 
 # --- deviation chip: peak far above the mean is itself a finding ---
@@ -492,15 +495,15 @@ rep('''      kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
         foot:rr.peakMin!=null?"at "+hm(rr.peakMin):""}),''',
     '''      kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
         chip:(rr.avgIn&&rr.peak/rr.avgIn>1.8)
-          ?{t:"peak "+fmt(rr.peak/rr.avgIn,1)+"\× the mean",tone:"warn"}:null,
+          ?{t:"peak "+fmt(rr.peak/rr.avgIn,1)+"× the mean",tone:"warn"}:null,
         foot:rr.peakMin!=null?"at "+hm(rr.peakMin):"",
-        note:"A peak far above the mean usually means a morning spike that emptied out \— the hour bands beside this show exactly where."}),''')
+        note:"A peak far above the mean usually means a morning spike that emptied out — the hour bands beside this show exactly where."}),''')
 
 open(F, 'w', encoding='utf-8').write(s)
 print("q5 ok — bytes", len(s))
 ```
 
-Anchor caution: the `\·` in the first anchor is the literal `·` character in the file (`" · "+cc.name`). If the assert fails, print the live line (`grep -n '"selected space"'` then `sed -n`) and match it exactly.
+Anchor caution: the `·` in the first anchor is the literal `·` character in the file (`" · "+cc.name`). If the assert fails, print the live line (`grep -n '"selected space"'` then `sed -n`) and match it exactly.
 
 - [ ] **Step 3: Verify**
 
@@ -563,28 +566,28 @@ def rep(a, b, n=1):
     s = s.replace(a, b)
 
 # per-day active share across the whole feed window, computed once above the card
-rep('''  v.appendChild(sec("Active Hours & Instructor Presence","camera \· share of the observed day"));''',
+rep('''  v.appendChild(sec("Active Hours & Instructor Presence","camera · share of the observed day"));''',
     '''  const actByDay=FEED_DATES.map(dd=>{
     const rs=roomsIn().map(r=>D[dd][r]).filter(Boolean);
     const tot=Math.max(1,rs.length*(DAY_TO-DAY_FROM));
     return rs.reduce((a,r)=>a+(r.activeMin||0),0)/tot*100;
   });
   const lowDays=actByDay.filter(x=>x<40).length;
-  v.appendChild(sec("Active Hours & Instructor Presence","camera \· share of the observed day"));''')
+  v.appendChild(sec("Active Hours & Instructor Presence","camera · share of the observed day"));''')
 
 rep('''      chip:{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)},
       note:"Share of the day a room had a cohort AND an instructor present together."}),''',
     '''      spark:{vals:actByDay,cur:FEED_DATES.indexOf(d),ref:75},
-      chip:lowDays>=3?{t:"low on "+lowDays+" of "+FEED_DATES.length+" days \— pattern, act",tone:"crit"}
-          :(pAct<40?{t:"single-day dip \— watch, don't act",tone:"warn"}
+      chip:lowDays>=3?{t:"low on "+lowDays+" of "+FEED_DATES.length+" days — pattern, act",tone:"crit"}
+          :(pAct<40?{t:"single-day dip — watch, don't act",tone:"warn"}
                    :{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)}),
-      note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day \— not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),''')
+      note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),''')
 
 open(F, 'w', encoding='utf-8').write(s)
 print("q6 ok — bytes", len(s))
 ```
 
-Note: `tri` and `spark` are mutually exclusive in `kcard()` (`if/else if` chain renders only one) — the spark **replaces** the tri here intentionally; the tri composition survives on the per-room cards two slides later. Also: the `\·` in the sec() anchor is the literal `·` in the file.
+Note: `tri` and `spark` are mutually exclusive in `kcard()` (`if/else if` chain renders only one) — the spark **replaces** the tri here intentionally; the tri composition survives on the per-room cards two slides later. Also: the `·` in the sec() anchor is the literal `·` in the file.
 
 - [ ] **Step 3: Verify**
 
@@ -713,11 +716,11 @@ def rep(a, b, n=1):
     s = s.replace(a, b)
 
 rep('''/* ================================================================
-   PAGE 5 \— COVERAGE  (feed integrity, all measured)
+   PAGE 5 — COVERAGE  (feed integrity, all measured)
    ================================================================ */
 function pageCoverage(){''',
     '''/* ================================================================
-   PAGE 5 \— COVERAGE  (feed integrity, all measured)
+   PAGE 5 — COVERAGE  (feed integrity, all measured)
    ================================================================ */
 /* Splits missing feed into per-camera outages (server up, camera off) and
    whole-centre outages (server down) inside the covered window of a day. */
@@ -744,24 +747,24 @@ rep('''    kcard({lbl:"Overnight Baseline Reading"''',
       val:(()=>{const o=offStats(d);return fmt(o?o.camMin:0);})(),unit:"min",
       tone:(()=>{const o=offStats(d);return o&&o.camMin>120?"crit":o&&o.camMin>30?"warn":"good";})(),
       chip:(()=>{const o=offStats(d);return o&&o.worst&&o.worstMin>0
-        ?{t:"worst: "+SP[o.worst].short+" \· "+fmt(o.worstMin)+" min",tone:"warn"}:null;})(),
+        ?{t:"worst: "+SP[o.worst].short+" · "+fmt(o.worstMin)+" min",tone:"warn"}:null;})(),
       foot:"single cameras dark while others streamed",
-      note:"Feed missing from one camera while the rest of the centre kept streaming \— the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
+      note:"Feed missing from one camera while the rest of the centre kept streaming — the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
     kcard({lbl:"Server-Off Minutes",src:"measured",
       val:(()=>{const o=offStats(d);return fmt(o?o.srvMin:0);})(),unit:"min",
       tone:(()=>{const o=offStats(d);return o&&o.srvMin>60?"crit":o&&o.srvMin>10?"warn":"good";})(),
       chip:(()=>{const n=FEED_DATES.filter(x=>{const o=offStats(x);return o&&o.srvMin>10;}).length;
-        return {t:n+" of "+FEED_DATES.length+" days \— "+(n>=3?"pattern":"isolated"),
+        return {t:n+" of "+FEED_DATES.length+" days — "+(n>=3?"pattern":"isolated"),
                 tone:n>=3?"crit":"ok"};})(),
       foot:"every camera dark at once",
-      note:"All cameras missing simultaneously \— the recording server (or power) was down, not one camera. A repeated pattern here is a non-compliance finding to report."}),
+      note:"All cameras missing simultaneously — the recording server (or power) was down, not one camera. A repeated pattern here is a non-compliance finding to report."}),
     kcard({lbl:"Overnight Baseline Reading"''')
 
 open(F, 'w', encoding='utf-8').write(s)
 print("q8 ok — bytes", len(s))
 ```
 
-Anchor caution: the `\—` in the pageCoverage banner anchor is the literal `—` in the file's comment. If `d` is not the date variable in `pageCoverage`, replace `offStats(d)` accordingly.
+Anchor caution: the `—` in the pageCoverage banner anchor is the literal `—` in the file's comment. If `d` is not the date variable in `pageCoverage`, replace `offStats(d)` accordingly.
 
 - [ ] **Step 3: Verify**
 
@@ -829,13 +832,16 @@ def rep(a, b, n=1):
 
 rep('      ["Learners enrolled",inr(a.enrolled),"ok"]',
     '''      ["Learners enrolled",inr(a.enrolled),"ok"],
-      ["Ongoing trainings",fmt(scopeList().filter(c=>c.m.attend>=40).length)+" of "+fmt(a.n),"ok"]''')
+      /* number of trades running across the centres in scope — a 5-trade
+         centre contributes 5. Not an activity measure. */
+      ["Ongoing trainings",fmt(scopeList().reduce((t,c)=>t+c.trades.length,0)),"ok"]''')
 
-# --- historical T-1 framing: this mock never claims to be live ---
+# --- historical T-1 framing: this mock never claims to be live; the
+#     KPI camera button opens detector evidence, hence "Camera Signals" ---
 rep('el("div",{class:"mp-badge"},[el("i"),document.createTextNode("Live intel")])',
     'el("div",{class:"mp-badge"},[el("i"),document.createTextNode("Historical · to T−1")])')
 rep('[el("i"),el("span",{text:"Live view"})]',
-    '[el("i"),el("span",{text:"Camera replay"})]')
+    '[el("i"),el("span",{text:"Camera Signals"})]')
 
 open(F, 'w', encoding='utf-8').write(s)
 print("q9 ok — bytes", len(s))
@@ -949,9 +955,10 @@ async () => { const bad=[];
     const x=document.getElementById("view").textContent;
     if(/NaN|undefined|Infinity/.test(x)) bad.push("ALL/"+tab); }
   S.date=FEED_DATES[FEED_DATES.length-1]; dSel.value=S.date; render();
-  if (document.querySelector(".kc-cam") &&
-      /Live view/.test(document.getElementById("view").textContent))
-    bad.push("Live view label still present");
+  const vtext = document.getElementById("view").textContent;
+  if (/Live view|Camera replay/.test(vtext)) bad.push("old camera-button label present");
+  if (document.querySelector(".kc-cam") && !vtext.includes("Camera Signals"))
+    bad.push("Camera Signals label missing");
   return bad; }
 ```
 
@@ -1063,7 +1070,7 @@ Append:
 
 ```markdown
 ## 2026-08-19 (Anshul's session) — Business-review fixes, final sweep
-**Code changed:** NSDC_Skill_Intelligence_Dashboard.html — Ongoing trainings row in the map's evidence base; full verification pass
+**Code changed:** NSDC_Skill_Intelligence_Dashboard.html — Ongoing trainings row (count of trades running across centres in scope), "Camera Signals" button label, Historical·T−1 badge, All-days date option; full verification pass
 **Chat summary:** Closed out the business-review batch: full Playwright sweep (every tab × India/state/centre, settled measurement) — zero NaN, zero clipped slides, zero page scroll, all camera drawers opening; KPI register audit confirms all sheet KPIs plus the meeting's new ones present and the removed ones (Invigilator, Head-to-Machine, the five red-cut sheet KPIs) absent; trades-count consistency check confirms 6 everywhere (the "5 vs 6" the reviewer caught live).
 **Context updated:** none this commit.
 ```

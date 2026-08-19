@@ -51,6 +51,12 @@ This file is the shared memory between everyone working on this project through 
 **Before ending any session that changed something meaningful** (a decision, a new mechanism, a lesson learned, a data source, a fixed bug worth remembering), update the relevant section above — then `git add CLAUDE.md`, commit, and push it along with the code change. A code diff without the "why" behind it is only half the context.
 
 **This is enforced, not just a request:**
-- A local git hook blocks any commit that touches `NSDC_Skill_Intelligence_Dashboard.html` without also staging `CLAUDE.md`. One-time setup after cloning: `git config core.hooksPath .githooks` (only needs running once per clone).
+- A local git hook blocks any commit that touches `NSDC_Skill_Intelligence_Dashboard.html` without also staging `CLAUDE.md` **and** `SESSION_LOG.md`. One-time setup after cloning: `git config core.hooksPath .githooks` (only needs running once per clone).
 - A GitHub Action (`.github/workflows/context-sync.yml`) re-checks the same rule on every push, server-side, regardless of whether the local hook was set up — so it catches it even on a fresh clone that skipped the one-time config.
-- To intentionally bypass for a trivial change (typo, formatting), use `git commit --no-verify` — but default to updating CLAUDE.md, not to bypassing.
+- To intentionally bypass for a trivial change (typo, formatting), use `git commit --no-verify` — but default to updating both files, not to bypassing.
+
+## SESSION_LOG.md — the substitute for syncing raw chat
+
+Claude's actual conversation transcript lives only on the machine/account that ran it — it is not something git can or should sync (huge, includes internal tool-call noise, potentially sensitive). `SESSION_LOG.md` is the practical substitute: **every session that changes the dashboard appends a short entry** — what code changed, a 3-6 line summary of what was discussed/decided/rejected, and whether CLAUDE.md itself was touched. This is enforced by the same pre-commit hook and CI check described above.
+
+A `post-merge` git hook (also enabled by the one-time `core.hooksPath` setup) fires automatically right after `git pull` and prints the new SESSION_LOG.md entries plus a code diff stat — so pulling doesn't just bring new lines of HTML, it tells you the story behind them without you having to go looking.

@@ -1,8 +1,8 @@
 name: Context sync check
 
 # Enforces the project rule: any push that changes the dashboard code must
-# also update CLAUDE.md in the same push, so the shared context a teammate's
-# Claude session loads never falls behind the code.
+# also update CLAUDE.md and SESSION_LOG.md in the same push, so the shared
+# context a teammate's Claude session loads never falls behind the code.
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Diff code changes against CLAUDE.md changes
+      - name: Diff code changes against CLAUDE.md / SESSION_LOG.md changes
         run: |
           BEFORE="${{ github.event.before }}"
           AFTER="${{ github.event.after }}"
@@ -33,10 +33,14 @@ jobs:
           echo "$CHANGED"
 
           if echo "$CHANGED" | grep -q '^NSDC_Skill_Intelligence_Dashboard\.html$'; then
-            if ! echo "$CHANGED" | grep -q '^CLAUDE\.md$'; then
+            MISSING=""
+            echo "$CHANGED" | grep -q '^CLAUDE\.md$'      || MISSING="$MISSING CLAUDE.md"
+            echo "$CHANGED" | grep -q '^SESSION_LOG\.md$' || MISSING="$MISSING SESSION_LOG.md"
+
+            if [ -n "$MISSING" ]; then
               echo ""
-              echo "::error::The dashboard HTML changed in this push but CLAUDE.md did not."
-              echo "::error::Update CLAUDE.md with what changed and why, then push again — see the 'Keeping this file in sync' section in CLAUDE.md."
+              echo "::error::The dashboard HTML changed in this push but$MISSING did not."
+              echo "::error::Update them with what changed and why, then push again — see 'Keeping this file in sync' in CLAUDE.md."
               exit 1
             fi
           fi

@@ -1,0 +1,47 @@
+#!/bin/sh
+# Runs automatically right after `git pull` / `git merge` finishes.
+# Prints exactly what changed since your last pull: code diff stats, the
+# new SESSION_LOG.md entries (the "what was discussed" summary), and
+# whether CLAUDE.md itself changed — so a sync tells you the story, not
+# just that files moved.
+
+OLD="$ORIG_HEAD"
+NEW="HEAD"
+
+# ORIG_HEAD isn't always set (e.g. fast-forward-only first pull) — fall
+# back to the reflog entry just before this merge.
+if [ -z "$OLD" ] || ! git cat-file -e "$OLD" 2>/dev/null; then
+  OLD=$(git rev-parse "HEAD@{1}" 2>/dev/null)
+fi
+if [ -z "$OLD" ] || [ "$OLD" = "$NEW" ]; then
+  exit 0
+fi
+
+CHANGED=$(git diff --name-only "$OLD" "$NEW")
+[ -z "$CHANGED" ] && exit 0
+
+echo ""
+echo "================ Synced: here's what changed ================"
+
+if echo "$CHANGED" | grep -q '^NSDC_Skill_Intelligence_Dashboard\.html$'; then
+  echo ""
+  echo "Code:"
+  git diff --stat "$OLD" "$NEW" -- NSDC_Skill_Intelligence_Dashboard.html | sed 's/^/  /'
+fi
+
+if echo "$CHANGED" | grep -q '^SESSION_LOG\.md$'; then
+  echo ""
+  echo "What happened (new session log entries):"
+  git diff "$OLD" "$NEW" -- SESSION_LOG.md \
+    | grep '^+' | grep -v '^+++' | sed 's/^+//' | sed 's/^/  /'
+fi
+
+if echo "$CHANGED" | grep -q '^CLAUDE\.md$'; then
+  echo ""
+  echo "Shared context (CLAUDE.md) was also updated — worth a skim:"
+  git diff --stat "$OLD" "$NEW" -- CLAUDE.md | sed 's/^/  /'
+fi
+
+echo ""
+echo "================================================================"
+echo ""

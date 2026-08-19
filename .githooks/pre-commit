@@ -1,14 +1,22 @@
 #!/bin/sh
-# Enforces: if the dashboard HTML is staged, CLAUDE.md must be staged too.
+# Enforces: if the dashboard HTML is staged, CLAUDE.md and SESSION_LOG.md
+# must be staged too — code without the "why" and "what was discussed"
+# is only partial context for the next person.
 # One-time setup per clone: git config core.hooksPath .githooks
 
 staged=$(git diff --cached --name-only)
 
 if echo "$staged" | grep -q '^NSDC_Skill_Intelligence_Dashboard\.html$'; then
-  if ! echo "$staged" | grep -q '^CLAUDE\.md$'; then
+  missing=""
+  echo "$staged" | grep -q '^CLAUDE\.md$'       || missing="$missing CLAUDE.md"
+  echo "$staged" | grep -q '^SESSION_LOG\.md$'  || missing="$missing SESSION_LOG.md"
+
+  if [ -n "$missing" ]; then
     echo ""
-    echo "BLOCKED: you're committing a change to the dashboard without updating CLAUDE.md."
-    echo "Add what changed and why to CLAUDE.md, then 'git add CLAUDE.md' and commit again."
+    echo "BLOCKED: you're committing a dashboard change without updating:$missing"
+    echo "  - CLAUDE.md: update the relevant section if anything structural changed"
+    echo "  - SESSION_LOG.md: append a new entry (see the template at the top of the file)"
+    echo "Then 'git add' them and commit again."
     echo "(Skip this check just once with: git commit --no-verify)"
     echo ""
     exit 1

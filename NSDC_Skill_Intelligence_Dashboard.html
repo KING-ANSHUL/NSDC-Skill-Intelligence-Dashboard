@@ -1128,12 +1128,12 @@ const ROOMS=SPACES.filter(s=>s.role==="classroom").map(s=>s.id);
 const COMMON=SPACES.filter(s=>s.role==="corridor"||s.role==="open").map(s=>s.id);
 
 const COURSES=[
-  {code:"CPA",name:"COPA",                   sector:"IT-ITeS",      enrolled:28,sanctioned:30,space:"cam-7",hours:8,start:9*60+30},
-  {code:"ELE",name:"Electrician",            sector:"Power",        enrolled:27,sanctioned:30,space:"cam-6",hours:8,start:9*60+15},
+  {code:"CPA",name:"COPA",                   sector:"IT-ITeS",      enrolled:34,sanctioned:40,space:"cam-7",hours:8,start:9*60+30},
+  {code:"ELE",name:"Electrician",            sector:"Power",        enrolled:31,sanctioned:35,space:"cam-6",hours:8,start:9*60+15},
   {code:"FIT",name:"Fitter",                 sector:"Capital Goods",enrolled:26,sanctioned:30,space:"cam-5",hours:8,start:9*60+15},
-  {code:"WLD",name:"Welder",                 sector:"Capital Goods",enrolled:19,sanctioned:25,space:"cam-8",hours:8,start:9*60+15},
-  {code:"RSA",name:"Retail Sales Associate", sector:"Retail",       enrolled:21,sanctioned:25,space:"cam-2",hours:6,start:10*60},
-  {code:"SOL",name:"Solar Technician",       sector:"Power",        enrolled:14,sanctioned:25,space:"cam-3",hours:6,start:10*60+30}
+  {code:"WLD",name:"Welder",                 sector:"Capital Goods",enrolled:19,sanctioned:30,space:"cam-8",hours:8,start:9*60+15},
+  {code:"RSA",name:"Retail Sales Associate", sector:"Retail",       enrolled:28,sanctioned:35,space:"cam-2",hours:6,start:10*60},
+  {code:"SOL",name:"Solar Technician",       sector:"Power",        enrolled:27,sanctioned:45,space:"cam-3",hours:6,start:10*60+30}
 ];
 const CO=Object.fromEntries(COURSES.map(c=>[c.code,c]));
 const courseOf=id=>SP[id]&&SP[id].course?CO[SP[id].course]:null;
@@ -4095,7 +4095,7 @@ function pageAttendance(){
         seenTxt:ppl(actHead)+" actual",decTxt:fmt(cmtHead)+" committed"},
       chip:{t:pc(cmtHead?actHead/cmtHead*100:0)+" present",
             tone:rygTone(cmtHead?actHead/cmtHead*100:0,75)},
-      note:"Enrolled headcount for each course against the headcount the camera detected in that same session."}),
+      note:"Enrolled headcount for each course against the headcount the camera detected in that same session. Centre-wide total across all six batches — no single batch exceeds the 45-seat cap."}),
     kcard({lbl:"Committed Trainer Count",src:"declared",val:cmtTrainers,unit:"trainers",
       cam:{space:instrCam(),signal:"instructor"},
       cmp:{seen:actTrainers,declared:cmtTrainers,
@@ -4111,7 +4111,7 @@ function pageAttendance(){
       foot:"declared at accreditation"}),
     kcard({lbl:"Biometric Attendance Count",src:"biometric",val:fmt(totAeb),unit:"AEBAS",
       cmp:{seen:totAeb,declared:totEnr,seenTxt:fmt(totAeb),decTxt:fmt(totEnr)+" enrolled"},
-      foot:"fingerprint device"}),
+      foot:"face-authentication device"}),
     kcard({lbl:"Camera Headcount",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:fmt(totCam,1),unit:"peak seen",
       tone:rygTone(totCam,totAeb),
       cmp:{seen:totCam,declared:totAeb,seenTxt:fmt(totCam,1),decTxt:fmt(totAeb)+" checked in"},
@@ -4129,7 +4129,7 @@ function pageAttendance(){
         {k:"Camera",c:SER[0],v:cam}],h:236,fmtV:x=>fmt(x,1)}),
       ()=>mkTable(["Course","Enrolled","Biometric","Camera peak","Biometric − camera"],
         cs.map((c,i)=>[c.name,String(enr[i]),String(aeb[i]),fmt(cam[i],1),ppl(gap[i])])),
-      "The register, the fingerprint device and the camera, side by side. Where the third falls far below the second, the session needs an explanation."),
+      "The register, the face-authentication device and the camera, side by side. Where the third falls far below the second, the session needs an explanation."),
     cx("Biometric Claim Less Camera Observation",null,
       W=>bars({W,cats:cs.map(c=>SP[c.space].short),v:gap,
         fmtV:x=>(x>0?"+":"")+ppl(x),vlabel:"Gap",max:Math.max(...gap,4),minH:236,
@@ -4257,6 +4257,16 @@ function pageQuality(){
       val:(()=>{const c=equip.filter(r=>SP[r].type==="computer-lab");
         return c.length?pc(avg(c.map(equipV))):"—";})(),
       foot:"computer labs"}),
+    kcard({lbl:"Infra / Asset Readiness",src:"modelled",
+      cam:{space:equipCam(),signal:"stations"},
+      val:(()=>{const rooms=roomsIn().filter(r=>SP[r].stations>0);
+        const committed=rooms.reduce((a,r)=>a+SP[r].stations,0);
+        const present=committed-1;   /* one welding booth not sighted in the mock */
+        return pc(committed?present/committed*100:0);})(),
+      tone:"warn",
+      chip:{t:"1 welding booth not sighted",tone:"warn"},
+      foot:"committed assets visible in frame",
+      note:"Is the committed asset physically present and visible — a readiness check, not a utilisation rate. Some assets are legitimately unused in a given lesson (a GDA bed during dummy practice), so utilisation would mislead; presence cannot."}),
     kcard({lbl:"Classroom Interactivity Ratio",src:"modelled",
       val:theory.length?pc(avg(theory.map(inter))):"—",
       foot:"where there is no equipment",
@@ -4308,11 +4318,11 @@ function pageQuality(){
 const ASSESS=COURSES.map(c=>{
   const g=rng(hashStr("as"+c.code));
   const anyRun=FEED_DATES.some(d=>D[d][c.space]&&D[d][c.space].running);
-  const cand=Math.round(c.enrolled*(0.9+g()*0.1));
+  const cand=Math.min(c.enrolled,Math.round(c.enrolled*(0.82+g()*0.15)));
   const present=Math.round(cand*(anyRun?(c.code==="WLD"?0.58+g()*0.08:0.83+g()*0.15):0.31+g()*0.1));
   return {code:c.code,name:c.name,space:c.space,anyRun,candidates:cand,present,
     vivasDone:Math.round(present*(anyRun?0.87+g()*0.12:0.55+g()*0.15)),
-    vivaAvg:6.5+g()*6,
+    vivaAvg:6.5+g()*6, theoryDur:70+g()*40, practicalDur:22+g()*18,
     invig:anyRun?(c.code==="WLD"?0.58+g()*0.1:0.86+g()*0.12):0.42+g()*0.12,
     peopleOnSystem:c.code==="CPA"?1.0+g()*0.18:1.0,
     headToMachine:SP[c.space].stations>0?(c.code==="WLD"?1.9+g()*0.5:1.0+g()*0.16):null};
@@ -4323,9 +4333,7 @@ function pageAssessment(){
   const A=ASSESS.filter(a=>inCentre(a.space));
   const totC=A.reduce((s,a)=>s+a.candidates,0), totP=A.reduce((s,a)=>s+a.present,0);
   const totV=A.reduce((s,a)=>s+a.vivasDone,0);
-  const wm=A.filter(a=>a.headToMachine!=null);
   const maxPos=Math.max(...A.map(a=>a.peopleOnSystem));
-  const maxH2M=wm.length?Math.max(...wm.map(a=>a.headToMachine)):null;
   const invigAvg=A.length?avg(A.map(a=>a.invig*100)):0;
 
   const AL=[], AR=[];
@@ -4333,7 +4341,8 @@ function pageAssessment(){
   AL.push(kg(4,[
     kcard({lbl:"Assessment Attendance Rate",src:"modelled",val:pc(totP/totC*100),
       tone:rygTone(totP/totC*100,85),
-      cmp:{seen:totP,declared:totC,seenTxt:totP+" present",decTxt:totC+" enrolled"},
+      note:"Candidates detected on assessment day against the ELIGIBLE list — only eligible candidates proceed to assessment, and that list comes from the assessment data sheet, not the enrolment register.",
+      cmp:{seen:totP,declared:totC,seenTxt:totP+" present",decTxt:totC+" eligible"},
       chip:{t:pc(totP/totC*100)+" attendance",tone:rygTone(totP/totC*100,85)}}),
     kcard({lbl:"Vivas Conducted",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:fmt(totV),unit:"of "+totP,
       tone:rygTone(totV/totP*100,90),
@@ -4347,43 +4356,51 @@ function pageAssessment(){
   ]));
 
   AR.push(sec("Proctoring Integrity Signals"));
-  AR.push(kg(3,[
+  AR.push(kg(2,[
     kcard({lbl:"People-on-System Ratio",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:fmt(maxPos,2),unit:"max",
-      tone:maxPos>1.05?"crit":"good",
+      tone:maxPos>1.2?"crit":"good",
       cmp:{seen:maxPos,declared:1,seenTxt:fmt(maxPos,2),decTxt:"1.00 expected"},
-      chip:maxPos>1.05?{t:"would flag",tone:"crit"}:{t:"within expectation",tone:"ok"},
-      note:"More than one person at a single computer during a scored exam."}),
-    kcard({lbl:"Head-to-Machine Ratio",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",
-      val:maxH2M==null?"—":fmt(maxH2M,2),unit:"max",
-      tone:maxH2M>1.2?"crit":maxH2M>1.05?"warn":"good",
-      cmp:maxH2M==null?null:{seen:maxH2M,declared:1,seenTxt:fmt(maxH2M,2),decTxt:"1.00 expected"},
-      chip:maxH2M>1.2?{t:"above 1:1",tone:"crit"}:{t:"at ratio",tone:"ok"},
-      foot:wm.length?SP[wm.reduce((a,b)=>a.headToMachine>b.headToMachine?a:b).space].short:""}),
-    kcard({lbl:"Invigilator Presence Rate",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:pc(invigAvg),
+      chip:maxPos>1.2?{t:"would flag — possible sharing",tone:"crit"}
+           :maxPos>1.02?{t:"≈1 · assessor at a screen",tone:"ok"}
+           :{t:"within expectation",tone:"ok"},
+      note:"More than one person at a single computer during a scored exam. Benchmark is 1.2 — a reading around 1.1 is usually the assessor pausing behind a screen while walking the room, not sharing."}),
+    kcard({lbl:"Assessor Presence Rate",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:pc(invigAvg),
       tone:rygTone(invigAvg,88),
       meter:invigAvg,meterK:invigAvg>=88?"ok":invigAvg>=72?"warn":"crit",
       foot:"of the exam window"}),
   ]));
 
   AL.push(cgrid(1,[
-    cx("Observed Present Against Enrolled Roll",
-      [{k:"Enrolled",c:CSSV("--q2")},{k:"Present",c:SER[0]}],
+    cx("Observed Present Against Eligible Candidates",
+      [{k:"Eligible",c:CSSV("--q2")},{k:"Present",c:SER[0]}],
       W=>columns({W,cats:A.map(a=>a.code),series:[
-        {k:"Enrolled",c:CSSV("--q2"),v:A.map(a=>a.candidates)},
+        {k:"Eligible",c:CSSV("--q2"),v:A.map(a=>a.candidates)},
         {k:"Present",c:SER[0],v:A.map(a=>a.present)}],h:208}),
-      ()=>mkTable(["Course","Enrolled","Present","Rate"],
+      ()=>mkTable(["Course","Eligible","Present","Rate"],
         A.map(a=>[a.name,String(a.candidates),String(a.present),
           pc(a.present/a.candidates*100)])),
-      "Candidates detected present on assessment day against candidates enrolled for it."),
+      "Candidates detected present on assessment day against the eligible list for that assessment."),
+  ]));
+  AR.push(sec("Round Durations","three assessment rounds"));
+  AR.push(kg(3,[
+    kcard({lbl:"Theory Duration",src:"modelled",
+      val:fmt(avg(A.map(a=>a.theoryDur)),0),unit:"min",
+      foot:"pen-and-paper round"}),
+    kcard({lbl:"Viva Duration",src:"modelled",
+      val:fmt(avg(A.map(a=>a.vivaAvg)),1),unit:"min",
+      foot:"per detected candidate-assessor pair"}),
+    kcard({lbl:"Practical Duration",src:"modelled",
+      val:fmt(avg(A.map(a=>a.practicalDur)),0),unit:"min",
+      foot:"machine-based demonstration, individual or group"}),
   ]));
   AR.push(cgrid(1,[
-    cx("Invigilator Presence by Trade",null,
+    cx("Assessor Presence by Trade",null,
       W=>bars({W,cats:A.map(a=>a.name),v:A.map(a=>a.invig*100),
         fmtV:x=>pc(x),max:100,vlabel:"Presence",minH:208,
         statusOf:x=>ryg(x,88),threshold:88,thresholdLabel:"flag under"}),
       ()=>mkTable(["Course","Room","Presence"],
         A.map(a=>[a.name,SP[a.space].name,pc(a.invig*100)])),
-      "Share of the assessment window an invigilator was in frame."),
+      "Share of the assessment window an assessor was in frame."),
   ]));
   v.appendChild(duo(AL,AR,"minmax(0,1.15fr) minmax(0,1fr)"));
   return v;

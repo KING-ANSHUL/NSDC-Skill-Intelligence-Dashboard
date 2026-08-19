@@ -541,7 +541,12 @@ body.focus-measured .allmod b{font-weight:680}
 .kc-v i{font-style:normal;font-size:13px;font-weight:620;color:var(--muted)}
 .kc-v.crit b{color:var(--critical)} .kc-v.warn b{color:#8a5a00} .kc-v.good b{color:var(--good-ink)}
 
-.kc-f{margin-top:auto;padding-top:4px;display:flex;align-items:center;gap:6px;min-height:15px}
+/* wraps deliberately: on a six-across KPI row a chip plus the Camera Signals
+   button exceed the card width, and a nowrap row cut the button off entirely.
+   Wrapping costs one line of height; clipping cost the affordance. */
+.kc-f{margin-top:auto;padding-top:4px;display:flex;align-items:center;gap:6px;
+  min-height:15px;flex-wrap:wrap;row-gap:5px}
+.kc-f>*{max-width:100%}
 .kc-chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;
   padding:2px 7px;border-radius:9px;letter-spacing:.02em;white-space:nowrap}
 .kc-chip .dt{width:5px;height:5px;border-radius:50%;flex:none}
@@ -553,8 +558,9 @@ body.focus-measured .allmod b{font-weight:680}
 .kc-chip.t-crit .dt{background:var(--critical)}
 .kc-chip.t-n{color:var(--ink-2);background:var(--surface-2)}
 .kc-chip.t-n .dt{background:var(--muted)}
-.kc-f em{font-style:normal;font-size:10.5px;color:var(--muted);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
+.kc-f em{font-style:normal;font-size:10.5px;color:var(--muted);overflow:hidden;
+  line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  white-space:normal}
 
 .kc-spark{margin-top:4px;height:18px}
 .kc-spark svg{display:block;width:100%;height:18px;overflow:visible}
@@ -707,7 +713,8 @@ body.focus-measured .allmod b{font-weight:680}
 .rank a:hover{color:var(--accent)}
 .rank a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .rank i{width:7px;height:7px;border-radius:50%;flex:none}
-.rank u{text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank u{text-decoration:none;flex:1;min-width:0;overflow:hidden;line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal}
 .rank b{font-variant-numeric:tabular-nums;font-weight:680;font-size:11.5px}
 .cov{display:flex;flex-direction:column;gap:0}
 .cov-r{display:flex;align-items:center;gap:7px;padding:3.5px 0;font-size:11px;
@@ -717,7 +724,8 @@ body.focus-measured .allmod b{font-weight:680}
 .cov-r i.t-ok{background:var(--good)}.cov-r i.t-warn{background:var(--warning)}
 .cov-r i.t-crit{background:var(--critical)}
 .cov-r u{text-decoration:none;flex:1;color:var(--muted);min-width:0;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
+  line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  white-space:normal}
 .cov-r b{font-variant-numeric:tabular-nums;font-weight:680}
 
 /* funnel */
@@ -879,6 +887,20 @@ body.focus-measured .allmod b{font-weight:680}
 .slide>.cg{flex:1 1 auto;min-height:0}
 .slide>.cg .cx{height:100%;display:flex;flex-direction:column;min-height:0}
 .slide>.cg .cx>div:not(.cx-h):not(.cx-lg){flex:1;min-height:0}
+/* a panel that stretches must hand that height to its content, or the bottom
+   half of the card is blank white. These two blocks are built from fixed-height
+   rows, so they need to be told to distribute. */
+/* height:100% because cx() nests the built node inside an unclassed wrapper
+   div — the wrapper is the flex item that stretches, not this block */
+.cvfill,.pfill{display:flex;flex-direction:column;min-height:0;justify-content:center;height:100%}
+/* rows grow to fill, but only to a sane ceiling — with fewer cameras the
+   remainder is split above and below rather than dumped at the bottom */
+.cg .cvfill .cvlist,.duo .cvfill .cvlist{flex:1;display:flex;flex-direction:column;justify-content:center}
+.cg .cvfill .cvlist li,.duo .cvfill .cvlist li{flex:1;min-height:30px;max-height:74px}
+.cg .cvfill .cvlist .tk,.duo .cvfill .cvlist .tk{height:11px}
+.cg .cvfill .cvlist .tk.span24,.duo .cvfill .cvlist .tk.span24{height:11px}
+.cg .pfill .strip,.duo .pfill .strip{flex:1;min-height:20px;max-height:120px;align-items:stretch}
+.cg .pfill .strip i,.duo .pfill .strip i{height:auto;align-self:stretch}
 .slide>.cg .cx svg.viz{width:100%;height:100%}
 /* a slide with no chart at all centres its cards in the frame instead of
    leaving a dead band under them */
@@ -1450,7 +1472,7 @@ function funnelOf(a){
   return [
     {k:"Enrolled",                 v:e,         s:"declared",note:"Declared at registration"},
     {k:"Camera-Verified Present",  v:present,   s:"measured",note:"Observed in frame in at least one session"},
-    {k:"Attendance Threshold Met", v:thresh,    s:"measured",note:"70% of scheduled learner-minutes observed"},
+    {k:"Attendance Threshold Met", v:thresh,    s:"measured",note:"Present for 70% of the session minutes the camera observed"},
     {k:"Equipment-Active Session", v:concord, s:"modelled",note:"Machinery showed detected activity during the session"},
     {k:"Assessment Attendance",    v:assessed,  s:"modelled",note:"Detected present on assessment day — proposed detector"},
     {k:"Certified",                v:certified, s:"declared",note:"Awarding body record"}
@@ -1504,19 +1526,12 @@ function deriveDay(camId,date){
     gapsMin:(FEEDMETA[camId]&&FEEDMETA[camId][date]?FEEDMETA[camId][date].gaps:0)*BUCKET,
     schedFrom,schedTo,
     committedMin:c?c.hours*60:0,
-    /* the export does not cover every scheduled minute on a partial day, so
-       "delivered vs scheduled" has to divide by the scheduled time actually
-       observable — otherwise a short export reads as a delivery collapse */
-    /* NOTE: committedCoveredMin is retained for the feed-coverage shortfall
-       figure only. It must never become the denominator of a delivery KPI —
-       it is derived from the declared daily start time, which a centre can
-       move to repair its own score. See the two-source rule in CLAUDE.md. */
-    committedCoveredMin:(()=>{
-      if(!c) return 0;
-      let n=0;
-      for(let i=sl(schedFrom);i<sl(schedTo)&&i<SLOTS;i++) if(s[i]>=0) n++;
-      return n*BUCKET;
-    })(),
+    /* There is deliberately NO "committed minutes actually covered by the
+       export" field here. It can only be computed by walking from COURSES[].start
+       — a declared DAILY batch timing — and the moment such a field exists,
+       something wires a KPI to it: the card colour on Active Class-Hours did
+       exactly that, under a note promising it did not. The two-source rule is
+       enforced by the field not existing, not by a comment asking nicely. */
     /* signed: a negative value means the cohort was in the room before the
        assumed start, which is evidence about the assumption, not the room */
     lateStart:(c&&firstIn>=0)?(mn(firstIn)-schedFrom):null,
@@ -1560,17 +1575,15 @@ function roll(date,centre){
   rs.forEach(r=>{if(r.peak>peak){peak=r.peak;peakCam=r.cam;}});
   const activeMin=rs.reduce((a,r)=>a+r.presentMin,0);
   const committed=rs.reduce((a,r)=>a+r.committedMin,0);
-  const committedSeen=rs.reduce((a,r)=>a+r.committedCoveredMin,0);
   return {
     rooms:rooms.length, running:live.length,
     /* null, not 0, when nothing ran — "no session" is not "zero students" */
     avgAtt:live.length?live.reduce((a,r)=>a+r.avgIn,0)/live.length:null,
     peak,peakCam,
     activeHours:activeMin/60, committedHours:committed/60,
-    committedSeenHours:committedSeen/60,
-    util:committedSeen?activeMin/committedSeen*100:null,
-    utilNaive:committed?activeMin/committed*100:null,
-    coverShortfallMin:Math.max(0,committed-committedSeen),
+    /* against the hours-per-day committed at ACCREDITATION — the only
+       commitment a centre cannot move after the fact */
+    util:committed?activeMin/committed*100:null,
     nightAvg:rs.length?rs.reduce((a,r)=>a+r.nightAvg,0)/rs.length:null,
     noDataMin:rs.reduce((a,r)=>a+r.noDataMin,0),
     gapsMin:rs.reduce((a,r)=>a+r.gapsMin,0)
@@ -2219,7 +2232,7 @@ function presenceStrip(bits,t0,step,legend){
   /* three states, and they must stay three: 1 detected, 0 not detected while a
      cohort WAS in the room, -1 no cohort so the question does not apply.
      Collapsing -1 into 0 turns an empty room into 12 hours of teacher absence. */
-  const box=el("div");
+  const box=el("div",{class:"pfill"});
   const st=el("div",{class:"strip"});
   const COL={1:ST.good,0:ST.critical,"-1":CSSV("--hair")};
   const TXT={1:"Instructor detected",0:"Cohort present, no instructor detected","-1":"No cohort in the room — not applicable"};
@@ -2895,9 +2908,17 @@ const CAMSIG={
         [noun.charAt(0).toUpperCase()+noun.slice(1)+"s installed", String(st.length)],
         ["Occupied by one learner", String(used-shared)],
         ["Idle", String(st.length-used), (st.length-used)?"warn":"good"],
-        ["Shared by more than one", String(shared), shared?"crit":"good"],
-        ["Utilisation at this minute", st.length?pc(used/st.length*100):"—",
-          st.length?rygTone(used/st.length*100,70):null]
+        /* sharing is a defect only in an exam room. Group practicals are
+           assessed together — that is precisely why the review removed
+           Head-to-Machine Ratio outright, so flagging a shared workbench as
+           critical would reinstate the 1:1 judgement it rejected. */
+        ["Shared by more than one", String(shared),
+          c.sp.type==="assessment"?(shared?"crit":"good"):null],
+        /* Infra Readiness is a yes/no presence check, never a utilisation %,
+           so the drawer it opens must not end on one */
+        ...(c.kpi==="Infra / Asset Readiness"?[]:[
+          ["Utilisation at this minute", st.length?pc(used/st.length*100):"—",
+            st.length?rygTone(used/st.length*100,70):null]])
       ];}
   },
   instructor:{
@@ -3210,7 +3231,8 @@ function buildCameraPanel(opt){
   rail.appendChild(dayRow);
 
   const kbox=el("div",{class:"vk"});
-  const kRows=SIG.rows({sp:SP[FOCUS],course:courseOf(FOCUS),sc:scenes[FOCUS],occ:null,cam:FOCUS,date})
+  const kRows=SIG.rows({sp:SP[FOCUS],course:courseOf(FOCUS),sc:scenes[FOCUS],occ:null,
+                        cam:FOCUS,date,kpi:opt.kpiLabel})
     .map(r=>{
       const val=el("b",{text:"—"});
       kbox.appendChild(el("div",{class:"vk-r"},[el("u",{text:r[0]}),val]));
@@ -3314,7 +3336,7 @@ function buildCameraPanel(opt){
     sFps.querySelector("s").textContent=occ===null?"—":(fsc.visible>=COHORT_THR?"in session":"below threshold");
 
     /* the KPI rail, recomputed at the playhead */
-    const ctx0={sp,course:courseOf(fid),sc:fsc,occ,cam:fid,date,head};
+    const ctx0={sp,course:courseOf(fid),sc:fsc,occ,cam:fid,date,head,kpi:opt.kpiLabel};
     const hv=SIG.head(ctx0);
     big.querySelector("b").textContent=hv.t;
     big.querySelector("b").className=hv.tone?("t-"+hv.tone):"";
@@ -3519,6 +3541,11 @@ const prevDay=()=>{const i=dayIdx();return i>0?FEED_DATES[i-1]:null;};
 const rollSeries=key=>FEED_DATES.map(d=>{const r=roll(d,S.centre||null);
   const v=r[key];return v==null?0:v;});
 const courseOfIn=()=>COURSES.filter(c=>inCentre(c.space));
+/* several NAMEF patterns build the centre name out of the district, so a
+   "district · name" label repeated the district and then lost the real name to
+   an ellipsis. Prefix only when it actually adds something. */
+const ctrLabel=c=>{const nm=String(c.name).split(",")[0].trim();
+  return nm.indexOf(c.district)===0?nm:c.district+" \u00b7 "+nm;};
 
 /* ================================================================
    PAGE 1 — OVERVIEW  (the sheet's "registry / overview", 16 KPIs)
@@ -3679,7 +3706,7 @@ function mapRail(){
 
   const inState=S.geo.lvl!=="in";
   const rows=inState
-    ? (ST_LIST[S.geo.st]||[]).map(c=>({k:c.id,v:c.m[S.metric],n:c.district+" · "+c.name.split(",")[0]}))
+    ? (ST_LIST[S.geo.st]||[]).map(c=>({k:c.id,v:c.m[S.metric],n:ctrLabel(c)}))
         .sort((a,b)=>b.v-a.v)
     : Object.keys(ST_AGG).filter(k=>ST_AGG[k].n>=8)
         .map(k=>({k,v:ST_AGG[k][S.metric],n:GEO[k][0]}))
@@ -3872,7 +3899,7 @@ function metricDetail(mk,onClose){
   const atIndia=S.geo.lvl==="in";
   const items=atIndia
     ? Object.keys(ST_AGG).map(k=>({n:GEO[k][0],v:ST_AGG[k][mk],k,go:()=>setScope({lvl:"st",st:k,ctr:null})}))
-    : (ST_LIST[S.geo.st]||[]).map(c=>({n:c.district+" · "+c.name.split(",")[0],v:c.m[mk],k:c.id,
+    : (ST_LIST[S.geo.st]||[]).map(c=>({n:ctrLabel(c),v:c.m[mk],k:c.id,
         go:()=>setScope({lvl:"ctr",st:c.st,ctr:c.id})}));
   items.sort((a,b)=>b.v-a.v);
 
@@ -3966,7 +3993,7 @@ function pageCentreOverview(){
   const CTR=scopeCentre();
   const acc=CTR?CTR.accDays:centresIn().reduce((m,c)=>Math.min(m,c.accDays),1e9);
 
-  v.appendChild(sec("Live Headcount Overview","camera · "+(CTR?CTR.name:scopeLabel())));
+  v.appendChild(sec("Headcount Overview","camera · "+(CTR?CTR.name:scopeLabel())));
   v.appendChild(kg(4,[
     kcard({lbl:"Avg Attendance",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:orDash(R.avgAtt,x=>fmt(x,1)),
       unit:"learners",delta:Rp&&R.avgAtt!=null&&Rp.avgAtt!=null?{v:R.avgAtt-Rp.avgAtt}:null,
@@ -4198,7 +4225,7 @@ function pageAttendance(){
       foot:"brief step-outs merged into Present"}),
   ]));
 
-  v.appendChild(sec("Committed vs. Actual","declared schedule against the camera record"));
+  v.appendChild(sec("Committed vs. Actual","committed at accreditation, against the camera record"));
   v.appendChild(kg(3,[
     kcard({lbl:"Committed Training Hours",src:"declared",val:fmt(cmtHours,1),unit:"h/day",
       cmp:{seen:actHours,declared:cmtHours,
@@ -4216,13 +4243,13 @@ function pageAttendance(){
     kcard({lbl:"Committed Trainer Count",src:"declared",val:cmtTrainers,unit:"trainers",
       cam:{space:instrCam(),signal:"instructor"},
       cmp:{seen:actTrainers,declared:cmtTrainers,
-        seenTxt:actTrainers+" detected",decTxt:cmtTrainers+" scheduled"},
+        seenTxt:actTrainers+" detected",decTxt:cmtTrainers+" committed"},
       chip:actTrainers<cmtTrainers?{t:(cmtTrainers-actTrainers)+" not detected",tone:"crit"}
                                   :{t:"all detected",tone:"ok"},
       note:"Trainers the centre committed to at accreditation — one per sanctioned course — against the trainers the camera feed detects. Not read from a daily timetable."}),
   ]));
 
-  v.appendChild(sec("Triangulated Attendance","register · biometric · camera"));
+  v.appendChild(sec("Triangulated Attendance","enrolment roll · biometric · camera"));
   v.appendChild(kg(3,[
     kcard({lbl:"Enrolled",src:"declared",val:fmt(totEnr),unit:"on the register",
       foot:"declared at accreditation"}),
@@ -4364,10 +4391,6 @@ function pageAttendance(){
     ]));
   }
 
-  /* committed vs actual */
-  const commH=rooms.reduce((a,r)=>a+D[d][r].committedMin,0)/60;
-  const actH=rooms.reduce((a,r)=>a+D[d][r].activeMin,0)/60;
-  const trainersExp=cs.length, trainersAct=rooms.filter(r=>D[d][r].instrMin>30).length;
   return v;
 }
 
@@ -4400,7 +4423,7 @@ function pageQuality(){
       foot:equip.length+" equipped spaces"}),
     kcard({lbl:"Zone Utilization Rate",cam:{space:equipCam(),signal:"stations"},src:"modelled",
       val:equip.length?pc(avg(equip.map(r=>equipV(r)*0.94))):"—",
-      foot:"Head-to-machine mapping",
+      foot:"Per-station occupancy",
       note:"Per-station occupancy inside a lab — which workbench actually had somebody at it. Needs spatial detection inside the room; the current feed reports one number per camera."}),
     kcard({lbl:"Workstation Utilization Rate",cam:{space:equipCam(),signal:"stations"},src:"modelled",
       val:(()=>{const c=equip.filter(r=>SP[r].type==="computer-lab");
@@ -4473,8 +4496,7 @@ const ASSESS=COURSES.map(c=>{
     vivasDone:Math.round(present*(anyRun?0.87+g()*0.12:0.55+g()*0.15)),
     vivaAvg:6.5+g()*6, theoryDur:70+g()*40, practicalDur:22+g()*18,
     invig:anyRun?(c.code==="WLD"?0.58+g()*0.1:0.86+g()*0.12):0.42+g()*0.12,
-    peopleOnSystem:c.code==="CPA"?1.0+g()*0.18:1.0,
-    headToMachine:SP[c.space].stations>0?(c.code==="WLD"?1.9+g()*0.5:1.0+g()*0.16):null};
+    peopleOnSystem:c.code==="CPA"?1.0+g()*0.18:1.0};
 });
 
 function pageAssessment(){
@@ -4670,7 +4692,7 @@ function pageCoverage(){
   });
   v.appendChild(cgrid(1,[
     cx("Camera Availability Window",null,
-      ()=>el("div",{},[cv,el("div",{class:"cv24"},
+      ()=>el("div",{class:"cvfill"},[cv,el("div",{class:"cv24"},
         ["00:00","06:00","12:00","18:00","24:00"].map(t=>el("span",{text:t})))]),null,
       "Each bar sits on the 24-hour clock — its left edge is when that feed starts, its right edge when it stops. Amber means the camera also dropped rows inside its own window."),
   ]));
@@ -4850,8 +4872,12 @@ function buildDeck(host){
     deck.style.height=(fills?cap:Math.min(n.scrollHeight+8,cap))+"px";};
   go(S.slide,false);
   /* a strip or chart that resizes changes the slide's height under us */
-  requestAnimationFrame(()=>{if(DECK_GO===go)
-    deck.style.height=track.children[S.slide].offsetHeight+"px";});
+  requestAnimationFrame(()=>{if(DECK_GO!==go) return;
+    /* clamp to the screen, exactly as go() and DECK_SYNC do — an unclamped
+       fix-up can pin the frame taller than the window, which puts the bottom
+       of the slide below the fold where nothing can scroll it back */
+    const cap=Math.max(320,innerHeight-deck.getBoundingClientRect().top-16);
+    deck.style.height=Math.min(track.children[S.slide].offsetHeight,cap)+"px";});
 }
 let DECK_GO=null;
 

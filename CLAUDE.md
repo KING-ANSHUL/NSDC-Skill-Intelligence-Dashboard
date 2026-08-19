@@ -49,3 +49,8 @@ Key mechanisms:
 This file is the shared memory between everyone working on this project through Claude — it is committed to the repo, so a teammate's `git pull` is the only way they get context on what you did and why. If this file is stale, the next person starts from zero.
 
 **Before ending any session that changed something meaningful** (a decision, a new mechanism, a lesson learned, a data source, a fixed bug worth remembering), update the relevant section above — then `git add CLAUDE.md`, commit, and push it along with the code change. A code diff without the "why" behind it is only half the context.
+
+**This is enforced, not just a request:**
+- A local git hook blocks any commit that touches `NSDC_Skill_Intelligence_Dashboard.html` without also staging `CLAUDE.md`. One-time setup after cloning: `git config core.hooksPath .githooks` (only needs running once per clone).
+- A GitHub Action (`.github/workflows/context-sync.yml`) re-checks the same rule on every push, server-side, regardless of whether the local hook was set up — so it catches it even on a fresh clone that skipped the one-time config.
+- To intentionally bypass for a trivial change (typo, formatting), use `git commit --no-verify` — but default to updating CLAUDE.md, not to bypassing.

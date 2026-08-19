@@ -1,0 +1,44 @@
+name: Context sync check
+
+# Enforces the project rule: any push that changes the dashboard code must
+# also update CLAUDE.md in the same push, so the shared context a teammate's
+# Claude session loads never falls behind the code.
+
+on:
+  push:
+    branches: ["**"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Diff code changes against CLAUDE.md changes
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          ZERO="0000000000000000000000000000000000000000"
+
+          if [ "$BEFORE" = "$ZERO" ]; then
+            # first push of a new branch: compare against its root commit
+            CHANGED=$(git diff --name-only $(git rev-list --max-parents=0 "$AFTER") "$AFTER")
+          else
+            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -q '^NSDC_Skill_Intelligence_Dashboard\.html$'; then
+            if ! echo "$CHANGED" | grep -q '^CLAUDE\.md$'; then
+              echo ""
+              echo "::error::The dashboard HTML changed in this push but CLAUDE.md did not."
+              echo "::error::Update CLAUDE.md with what changed and why, then push again — see the 'Keeping this file in sync' section in CLAUDE.md."
+              exit 1
+            fi
+          fi
+
+          echo "OK — context is in sync."

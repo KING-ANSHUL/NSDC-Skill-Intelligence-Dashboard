@@ -1,0 +1,4 @@
+# shell scripts must stay LF-terminated regardless of the checkout OS,
+# or the shebang breaks when git bash / CI tries to execute them
+.githooks/* text eol=lf
+*.yml text eol=lf

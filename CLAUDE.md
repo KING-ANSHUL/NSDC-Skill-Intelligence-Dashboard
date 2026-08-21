@@ -181,6 +181,69 @@ Rules that came out of it:
 - **Categorical bars are still in room order, not sorted by value.** Sorting would break the positional
   correspondence between every chart on a page and the room list beside it.
 
+## One control geometry, and the dead code that caused three (2026-08-21)
+
+Anshul's note was that the Camera Signals button "doesn't even look identical" — and measuring the
+controls proved him right in a way that was not a matter of taste. In a single card footer:
+
+| control | height | font | corner |
+|---|---|---|---|
+| status chip `.kc-chip` | 19.2px | 10.5px | 9px |
+| Camera Signals `.kc-cam` | **21.4px** | **9.5px** | **2px** |
+| delta pill `.kc-d` | 19.2px | 10.5px | **10px** |
+| Table toggle `.cx-h .tv` | 19.2px | 10.5px | 9px |
+
+Three corner radii and two heights on one card, so the chip reporting a status and the button that
+opens that status's own camera evidence read as two unrelated design languages. There are now **two
+control families and no third**, driven by tokens (`--r-ctl`, `--r-pill`, `--h-inline`, `--h-ctl`,
+`--fs-inline`, `--focus`):
+
+- **inline** — anything inside a KPI card or a chart header: 20px tall, 10px type, pill corner. The
+  button keeps a border and a hover state; *that* is what separates an affordance from a label, not a
+  different shape language. Verified across all 150 slide-states: every inline control resolves to
+  exactly one signature, `20px | 10px | 999px`.
+- **chrome** — `.ghost`, `.backbtn`, `.mp-back`, `.cd-x`, `.pill`, `.st-nav`: 26px tall, 11px type,
+  2px corner. (`.st-nav` keeps a 15px glyph — an arrow is an icon, not text.)
+
+**`font:inherit` is a trap in a family system.** It is a shorthand, so it resets `font-size` back to the
+13px body value. Four chrome controls declared it *after* the family rule and silently opted out of the
+family's type size, landing at 11.5px, 13px and 15px. They want `font-family:inherit`.
+
+**Nothing may wear live grammar, including the affordance itself.** The REPLAY discipline was being
+applied to the drawer's badge but not to the two dots on the button that opens it: `.kc-cam i` carried a
+glow ring and turned bright green when expanded, and `.cd-dot` in the drawer header was green with a
+glow. A glowing green dot is live-camera grammar on a dashboard whose entire premise is that it is
+showing yesterday. Both are static now, `.cd-dot` in the same `#7aa7d4` as `.rec.replay`.
+
+**The Centre Register was mouse-only** — a click handler on a `<tr>` with no keyboard path at all,
+on the primary drill of the Overview page. It now has `tabindex`, `role="button"`, an `aria-label` and
+an Enter/Space handler, and every control shares one `:focus-visible` ring off `--focus`.
+
+### The dead code was the cause, not a side issue
+
+The stylesheet had **305 class names, 64 of which matched nothing** anywhere else in the file. Two of
+them were `.chip` and `.meter` — *a second status chip and a second meter component*, reachable only
+from `tile()`, which nothing calls. Two components for one semantic, one of them invisible, is exactly
+how a stylesheet ends up with three corner radii for one row of a card. Removed: `tile()`,
+`chartShell()`, `stacked()`, `spark()` (four uncalled primitives), the v1 provenance legend
+(`.pv*`/`.pvkey`/`.allmod`, superseded by `.sd`/`.skey`), the standalone vision panel
+(`.vstrip`/`.vs-*`/`.sig*`/`.thumb*`, superseded by the camera drawer), and the pre-slide-deck scaffold
+(`.page-head`, `.band-head`, `.filterbar`, `.f-push`, `.mockbadge`, `.verdict*`, `.finds*`, `.flags*`,
+`.tmix*`, `.dark-call`, `.tickmark`, `.fitw`, `.geo-col`, `.dl-2`, `.num`). Net −280 lines.
+
+**Two rules for doing this safely, both learned the hard way in this pass:**
+
+1. **A class-orphan check does not see type selectors.** Deleting the "page scaffold" block by its
+   comment boundary took `main{padding:14px 22px 18px;max-width:1560px;…}` with it, because `main` is
+   an element selector and never appeared in the orphan list. Every page lost its horizontal padding
+   and the first card's left rail clipped at x=0. It was caught by *looking at a screenshot*, not by
+   any of the numeric checks — which is the argument for still looking.
+2. **Never delete a block by comment boundary without diffing the selectors.** The two rules that make
+   the "Measured only" toggle do anything (`body.focus-measured .is-modelled`) sit between the dead v1
+   legend and the dead `.pvkey` block. An earlier audit already found that toggle to be a no-op once;
+   deleting neighbours is a second way to re-create the same defect. Diff old-vs-new selector sets and
+   re-test the toggle explicitly.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

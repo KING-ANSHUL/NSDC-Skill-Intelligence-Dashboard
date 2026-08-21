@@ -86,6 +86,101 @@ The audit cluster that died on a connection error was re-run (5 lenses, every fi
 - **The deck's post-build fix-up must clamp to the screen.** `go()` and `DECK_SYNC` both cap the frame at `innerHeight − deckTop − 16`; the `requestAnimationFrame` fix-up did not, and pinned the deck to the slide's own `offsetHeight`. Catch one unsettled frame — a font landing, a chart resizing, Chrome opening its banner and shortening the viewport — and the frame stays taller than the window, putting the bottom of the slide below the fold where nothing can scroll it back. It is clamped now.
 - **Measuring layout is where this goes wrong, twice over.** The 440ms entrance animation inflates `scrollHeight` by 4–9px, and **`DECK_GO(i)` restarts it** — waiting after `render()` is not enough, you must wait ~500ms after every slide change too. Nineteen "overflowing" slides across three scopes were entirely this artifact. Equally, an ink-bottom measure (deepest painted element) lies in two directions: SVG child rects are not clipped by their `svg`, so a map reads 671px past its panel, and content inside an `overflow:auto` container counts in full, so a 1,148-row table reads 45,082px tall while it scrolls harmlessly inside its own panel. **Exclude SVG descendants and scrollable subtrees, or verify a suspicious finding against the box model before "fixing" it.** Two of the three defects found this way were not defects.
 
+## Card marks and the empty-card problem (UI revamp, 2026-08-21)
+
+A card with a number and nothing else is not a minimal card, it is an unfinished one. Before this pass,
+23 of the 57 KPI cards carried only a value over 60–90px of white space, and `meter:` — set on fourteen
+cards — **had no CSS rule at all**, so every one of them appended a zero-height transparent div. The
+value was on screen; the mark that gives it a denominator was silently absent.
+
+The card now has a **mark vocabulary**, one slot per shape of figure. Add a card by picking the slot
+that matches what the number *is*, not by defaulting to a meter:
+
+- **`units:{on,total,k,cap}`** — a countable set drawn as the set. Use it whenever the denominator is
+  under ~20 and nameable: rooms, cameras, spaces, equipped rooms. `6 of 8` as eight glyphs reads from
+  the back of a room and cannot raise "per cent of what?". A percentage over a countable set *hides*
+  the story — 80% coverage hides the one Assessment Hall nobody is watching; nine glyphs with one
+  hollow tells it. Above `cap` (default 20) glyphs stand for groups and the row prints `each ×N`, so
+  never use it where one missing item is the finding (see Infra Readiness, which counts **rooms**, not
+  its 67 individual stations, for exactly this reason).
+- **`meter` + `meterRef` + `meterAx`** — a rate against a reference. **The reference must be drawn.**
+  Every ratio on the Quality page scored against a benchmark (65/70/70/70) that appeared nowhere on the
+  card; `meterRef` puts a rule at it and `meterAx` names it. A meter with no reference is a claim about
+  a denominator nobody stated.
+- **`tri` + `triHi` + `triAx`** — three slices of one whole. Active / Unsupervised / Idle were three
+  cards showing three unrelated percentages; all three now draw the **same** bar and emphasise their own
+  slice, so a reader can see that they sum. Emphasis is an inset outline (`i.hi`), not only dimming of
+  the others — the Idle slice is grey, and a dimmed grey and a highlighted grey are the same colour.
+- **`day:{span,from,to,at,gaps}`** — a time as a position, not a number. Feed Availability was a meter,
+  which threw away the shape of the window that the chart below it draws at full width. Also First
+  Cohort Detection and the circulation cards, where "busiest" is a *time*.
+- **`days:{on[],cur,lbl}`** — frequency across the four days of feed. Whether a camera-off is
+  intentional or technical is decided by how many days show it; that lived in prose and is now four
+  dots with the selected day ringed.
+- **`range:{v,lo,hi,min,max,fmt}`** — a mean with its spread. A bare Mean Classifier Confidence was the
+  most misleading number on the Overview page: one confident room covers for a room the model is
+  guessing at. Also the overnight false-positive floor, whose *ceiling* is the number that matters.
+- **`band:{v,min,max,lines[]}`** — the one licensed band scale, for People-on-System only. Benchmark
+  1.2, and 1.1 is the assessor pausing behind a screen. The interpretation *is* the content, so the
+  thresholds are on screen; a bare "1.03" invites the opposite conclusion.
+- **`mini:{vals,labs,hi}`** — where inside a centre-wide total the quantity sits (seats per course,
+  vacancy per course, roll per course). A total plus its own spread is two facts; a total alone is one.
+- **`tags:[…]`** — the declared list itself rather than its cardinality. "4 sectors" is strictly less
+  informative than the four sector names, which fit.
+
+Rules that came out of it:
+
+- **`sparkline()` draws dots, not a curve, for ≤6 points.** The real export is four days long; a
+  smoothed area over four readings draws a shape the data cannot support. A null day is a hollow mark on
+  the axis, never a zero. Longer series (an intra-day curve) keep the area.
+- **Filling a void is height-neutral.** A grid row is already as tall as its tallest card, so a mark
+  inside a previously empty card costs no vertical space. All 150 slide-states still fit after this
+  pass. This is why the fix was "give every card its mark", not "delete cards".
+- **A frozen KPI name cannot be fixed by shortening it.** On the five-across Quality row four of six
+  labels were ellipsised mid-word ("EQUIPMENT UTILIZATION R…") while the card had 60px of unused height
+  underneath. `.kc-h u` now clamps to **two lines** instead of one line with an ellipsis. Reach for
+  wrapping before you reach for the label.
+- **In `.km-ax`, the reference is the half that must survive.** The left caption is clamped; the right
+  (`85% reference`) is `flex:none`. The half carrying the judgement is never the half that is squeezed.
+- **A status class must not repaint a hollow glyph.** `.ku.warn i` outranked `.ku i.off` and coloured in
+  the uncovered rooms, erasing the entire point of the unit chart. Status rules target `i.on`.
+- **Modelled differs in kind, not only in hue.** `.kc.is-modelled` now has a hatched rail and hatches
+  every fill inside it (meter, comparison bar, tri, units, mini). A modelled figure is a promise, not a
+  measurement, and the provenance dot alone was carrying that distinction.
+- **`Infra / Asset Readiness` was rendering `pc()`** — a utilisation percentage, the exact shape the
+  business review removed outright, printed three lines under a note explaining that it is not one. It
+  is now a count of assets sighted with a glyph per equipped room. Same defect class as a `tone:` that
+  contradicts its own caption: **when the copy and the number disagree, the number is what the room
+  reads.**
+- **Round Durations share one minute ceiling** (`niceMax` over all three), so theory 92 / viva 10 /
+  practical 31 compare at a glance. Three big numbers on the same unit with no shared scale threw the
+  comparison away.
+- **One card may legitimately need two marks.** Active Time % is a slice of a whole *and* its own note
+  promises a sparkline that separates a one-day dip from a pattern. The mark chain picked `tri` and
+  dropped the `spark` without a trace, so the note described a mark that was not drawn. `kcard()` now
+  renders both for that combination. **If a note promises a mark, grep that the mark renders.**
+- **A single-slide page still has to fill the screen.** `buildDeck()` returned early when a page needed
+  only one slide, so Quality and Assessments rendered at content height with a 200–300px grey band
+  across the bottom of the projector. The page now gets `.solo` and the same fill rules a slide uses
+  (`min-height`, not `height` — a camera drawer opening later must be able to grow it).
+- **A reference-scored heatmap needs a reference-scored legend.** `heat()` printed the continuous blue
+  `SEQ` swatches with min/max endpoints under red-and-green cells whose colour encodes *distance from a
+  reference*, where a min and a max mean nothing. With `colorOf` it now prints discrete RYG steps,
+  `under … above`, the reference boundary marked by an inset rule, and `refLabel` naming what the
+  reference is. Pass `refLabel` whenever you pass `colorOf`.
+
+**Not done, deliberately, and why** — flagged for the business rather than decided here:
+
+- **No primary/secondary/tertiary card hierarchy.** Deciding which single KPI an officer should land on
+  per slide is a business call about what NSDC cares about, not a design one. Inventing a ranking would
+  put my guess on a projector in front of the people who own that answer.
+- **No new hero graphics** (a slope chart for Enrolled → Biometric → Camera, a full-width instructor
+  gantt). Both facts are already drawn — by "Enrolment, Biometric and Camera Compared" and by
+  `presenceStrip` — and this file has a documented history of duplicate sections creeping in. Replacing
+  the grouped columns with a dumbbell is a live option; adding one *beside* them is not.
+- **Categorical bars are still in room order, not sorted by value.** Sorting would break the positional
+  correspondence between every chart on a page and the room list beside it.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

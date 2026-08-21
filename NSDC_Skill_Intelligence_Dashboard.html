@@ -330,6 +330,10 @@ table.dv th{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color
 .hm-scale{display:flex;align-items:center;gap:8px;margin-top:11px;font-size:11px;color:var(--ink-2)}
 .hm-scale .sw{display:flex;gap:2px}
 .hm-scale .sw i{width:24px;height:11px;border-radius:1px}
+/* the reference is a boundary between two swatches, not a swatch of its own */
+.hm-scale .sw i.ref{box-shadow:inset 2px 0 0 var(--ink)}
+.hm-scale em{font-style:normal;color:var(--muted);margin-left:2px;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- flag list ---------- */
 .flags{margin:0;padding:0;list-style:none}
@@ -527,8 +531,10 @@ body.focus-measured .allmod b{font-weight:680}
 .kc.b-crit{border-left-color:var(--critical)}
 
 .kc-h{display:flex;align-items:center;gap:6px;min-height:14px;flex:none}
+.kc-h{align-items:flex-start}
 .kc-h u{text-decoration:none;font-size:10.5px;text-transform:uppercase;letter-spacing:.085em;
-  font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  font-weight:700;color:var(--muted);min-width:0;overflow:hidden;line-height:1.25;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal}
 .kc-d{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:3px;
   font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:10px;
   font-variant-numeric:tabular-nums;letter-spacing:.01em}
@@ -883,10 +889,12 @@ body.focus-measured .allmod b{font-weight:680}
 
 /* Two related blocks side by side. A drilldown is not a new chapter — it
    belongs next to the thing it drills into, not a screen below it. */
-.slide>.duo{flex:1;min-height:0}
-.slide>.cg{flex:1 1 auto;min-height:0}
-.slide>.cg .cx{height:100%;display:flex;flex-direction:column;min-height:0}
-.slide>.cg .cx>div:not(.cx-h):not(.cx-lg){flex:1;min-height:0}
+.slide>.duo,.solo>.duo{flex:1;min-height:0}
+.solo{display:flex;flex-direction:column;min-height:0}
+.slide>.cg,.solo>.cg{flex:1 1 auto;min-height:0}
+.slide>.cg .cx,.solo>.cg .cx{height:100%;display:flex;flex-direction:column;min-height:0}
+.slide>.cg .cx>div:not(.cx-h):not(.cx-lg),
+.solo>.cg .cx>div:not(.cx-h):not(.cx-lg){flex:1;min-height:0}
 /* a panel that stretches must hand that height to its content, or the bottom
    half of the card is blank white. These two blocks are built from fixed-height
    rows, so they need to be told to distribute. */
@@ -901,7 +909,7 @@ body.focus-measured .allmod b{font-weight:680}
 .cg .cvfill .cvlist .tk.span24,.duo .cvfill .cvlist .tk.span24{height:11px}
 .cg .pfill .strip,.duo .pfill .strip{flex:1;min-height:20px;max-height:120px;align-items:stretch}
 .cg .pfill .strip i,.duo .pfill .strip i{height:auto;align-self:stretch}
-.slide>.cg .cx svg.viz{width:100%;height:100%}
+.slide>.cg .cx svg.viz,.solo>.cg .cx svg.viz{width:100%;height:100%}
 /* a slide with no chart at all centres its cards in the frame instead of
    leaving a dead band under them */
 .slide.centered{justify-content:space-evenly}
@@ -1005,16 +1013,137 @@ body.focus-measured .allmod b{font-weight:680}
 .lb .nm em{display:block;font-style:normal;font-size:9.5px;color:var(--muted)}
 /* every centre in scope is listed; the panel scrolls, the page does not */
 .lb-scroll{padding:0 6px 4px;overflow-y:auto;min-height:0;flex:1}
-.slide>.panel{flex:none}
-.slide>.panel.grow{flex:1;min-height:0}
-.slide>.camdrawer,.slide>.mdrawer{flex:none}
-.slide>.cx{flex:none}
+.slide>.panel,.solo>.panel{flex:none}
+.slide>.panel.grow,.solo>.panel.grow{flex:1;min-height:0}
+.slide>.camdrawer,.slide>.mdrawer,.solo>.camdrawer,.solo>.mdrawer{flex:none}
+.slide>.cx,.solo>.cx{flex:none}
 .lb thead th{position:sticky;top:0;background:var(--surface);z-index:2;
   box-shadow:0 1px 0 var(--rule)}
 .lb .sw{display:inline-block;width:44px;height:7px;border-radius:1px;vertical-align:middle}
 .lb.tc td:nth-child(2),.lb.tc td:nth-child(3),
 .lb.tc th:nth-child(2),.lb.tc th:nth-child(3){text-align:left}
 .lb.tc td:last-child,.lb.tc th:last-child{text-align:left;white-space:nowrap}
+
+/* ================================================================
+   CARD MARK VOCABULARY
+   Every KPI card that carried only a number had 60-90px of void under
+   it, and `meter:` — set on fourteen cards — had no rule at all, so it
+   rendered a zero-height transparent div. These marks fill that void
+   with the figure's own shape: a countable set as glyphs, a time as a
+   position on the day, a confidence as a range, a frequency as four
+   dots. Height-neutral: a grid row is already as tall as its tallest
+   card, so a mark inside a previously empty card costs nothing.
+   ================================================================ */
+
+/* the card meter — the missing rule. Track is the light step of its own
+   ramp; the reference is a rule, not a hint. */
+.km{position:relative;height:8px;margin-top:9px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:2px}
+.km>i{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:1px 0 0 1px}
+.km.ok{background:#eaf7ea}   .km.ok>i{background:var(--good)}
+.km.warn{background:#fdf6e6} .km.warn>i{background:var(--warning)}
+.km.crit{background:#fbeeee} .km.crit>i{background:var(--critical)}
+.km>u{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;
+  background:var(--ink);text-decoration:none;border-radius:1px}
+.km-ax{display:flex;justify-content:space-between;gap:8px;margin-top:4px;
+  font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.km-ax b{color:var(--ink-2);font-weight:700}
+.km-ax span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.km-ax span:last-child{flex:none}
+
+/* a countable set is shown as the set. "6 of 8" as eight glyphs reads from
+   the back of a room and cannot raise the question "per cent of what?". */
+.ku{display:flex;flex-wrap:wrap;gap:3px;margin-top:9px;align-items:center}
+.ku i{width:13px;height:13px;border-radius:2px;background:var(--s1);flex:none}
+.ku i.off{background:transparent;border:1.5px solid var(--rule)}
+/* the status class must not repaint the hollow glyphs: an "off" unit is the
+   room nobody is watching, and colouring it in erases the whole point */
+.ku.ok i.on{background:var(--good)} .ku.warn i.on{background:var(--warning)}
+.ku.crit i.on{background:var(--critical)} .ku.dec i.on{background:var(--muted)}
+.ku s{text-decoration:none;font-size:10px;color:var(--muted);margin-left:3px;
+  font-variant-numeric:tabular-nums}
+
+/* declared content is more informative than its own cardinality: the sectors,
+   the room categories, the mismatched pairs — not just how many there are */
+.ktags{display:flex;flex-wrap:wrap;gap:4px;margin-top:9px;overflow:hidden;max-height:44px}
+.ktags b{font-weight:640;font-size:10px;letter-spacing:.02em;padding:2px 6px;
+  border:1px solid var(--hair);border-radius:9px;background:var(--surface-2);
+  color:var(--ink-2);white-space:nowrap}
+
+/* a per-item spread under a centre-wide total: which course holds the seats,
+   where the vacancy actually is */
+.kmini{display:flex;align-items:flex-end;gap:3px;height:26px;margin-top:9px}
+.kmini i{flex:1;min-width:3px;background:var(--q3);border-radius:1px 1px 0 0;
+  align-self:flex-end}
+.kmini i.hi{background:var(--s1)}
+.kmini-ax{display:flex;gap:3px;margin-top:3px}
+.kmini-ax span{flex:1;min-width:0;font-size:9px;color:var(--muted);text-align:center;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+
+/* a mean is not a distribution. A confidence or a floor reading gets its
+   spread drawn, so nobody reads the average as the whole story. */
+.krg{position:relative;height:20px;margin-top:9px}
+.krg .tk{position:absolute;left:0;right:0;top:9px;height:2px;background:var(--hair)}
+.krg .sp{position:absolute;top:7px;height:6px;background:var(--q2);border-radius:3px}
+.krg .mn,.krg .mx{position:absolute;top:4px;height:12px;width:1.5px;background:var(--rule)}
+.krg .vv{position:absolute;top:3px;width:3px;height:14px;margin-left:-1.5px;
+  background:var(--ink);border-radius:1px}
+.krg-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);
+  font-variant-numeric:tabular-nums;margin-top:-2px}
+
+/* a time is a position, not a number. Feed windows, first detection and the
+   busiest moment in a corridor all live on the same day rail. */
+.kdb{position:relative;height:11px;margin-top:9px;background:var(--surface-2);
+  border:1px solid var(--hair);border-radius:2px;overflow:hidden}
+.kdb>i{position:absolute;top:0;bottom:0;background:var(--s1);border-radius:1px}
+.kdb.warn>i{background:var(--warning)}
+.kdb>u{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;
+  background:var(--ink);text-decoration:none;overflow:visible}
+.kdb>s{position:absolute;top:0;bottom:0;text-decoration:none;
+  background:repeating-linear-gradient(45deg,var(--rule) 0 2px,transparent 2px 5px)}
+
+/* frequency across the four days of feed is what separates an intentional
+   switch-off from a technical fault, so it is drawn, not written */
+.kdays{display:flex;align-items:center;gap:5px;margin-top:9px}
+.kdays i{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--rule);
+  background:transparent;flex:none}
+.kdays i.on{background:var(--critical);border-color:var(--critical)}
+.kdays i.cur{box-shadow:0 0 0 2px var(--accent-soft)}
+.kdays em{font-style:normal;font-size:10.5px;color:var(--muted);font-weight:600;
+  margin-left:4px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* the one licensed band scale: for People-on-System the interpretation IS the
+   content — 1.0 expected, 1.2 the breach line, 1.1 the assessor behind a
+   screen. A bare "1.1" invites exactly the wrong conclusion. */
+.kband{position:relative;height:22px;margin-top:9px}
+.kband .tk{position:absolute;left:0;right:0;top:6px;height:9px;border-radius:2px;
+  background:linear-gradient(90deg,#eaf7ea 0 60%,#fdf6e6 60% 78%,#fbeeee 78% 100%);
+  border:1px solid var(--hair)}
+.kband .bl{position:absolute;top:2px;bottom:5px;width:1.5px;background:var(--rule)}
+.kband .vv{position:absolute;top:1px;width:3px;height:19px;margin-left:-1.5px;
+  background:var(--ink);border-radius:1px}
+.kband-ax{position:relative;height:12px;font-size:10px;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.kband-ax span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+
+/* a modelled figure is a promise, not a measurement — so it differs in KIND,
+   not only in the hue of its dot: the rail is hatched and so is every fill
+   inside it. The dot alone was carrying this distinction on its own. */
+.kc.is-modelled{border-left-color:#efdcae}
+.kc.is-modelled::before{content:"";position:absolute;left:-3px;top:-1px;bottom:-1px;
+  width:3px;pointer-events:none;
+  background:repeating-linear-gradient(180deg,var(--warning) 0 3px,transparent 3px 7px)}
+.kc.is-modelled .km>i,.kc.is-modelled .kc-bar>i,.kc.is-modelled .kc-tri i,
+.kc.is-modelled .ku i,.kc.is-modelled .kmini i{
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.6) 0 2px,transparent 2px 4px)}
+
+/* three cards that are three slices of one whole show the whole, each
+   emphasising its own slice — so the reader can see that they sum */
+.kc-tri i.dim{opacity:.30}
+.kc-tri i.hi{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.kc-tri-ax{display:flex;gap:10px;margin-top:4px;font-size:10px;color:var(--muted)}
+.kc-tri-ax i{display:inline-flex;align-items:center;gap:4px;font-style:normal}
+.kc-tri-ax i b{width:7px;height:7px;border-radius:1px;flex:none}
 </style>
 </head>
 <body>
@@ -2218,11 +2347,19 @@ function heat(o){
     });
   });
   box.appendChild(g);
-  const sc=el("div",{class:"hm-scale"},[
-    el("span",{text:fmtV(mn)+unit}),
-    el("span",{class:"sw"},SEQ.map(c=>el("i",{style:"background:"+c}))),
-    el("span",{text:fmtV(mx)+unit})
-  ]);
+  const sc=colorOf
+    ? el("div",{class:"hm-scale"},[
+        el("span",{text:"under"}),
+        el("span",{class:"sw"},RYG.map((c,i)=>
+          el("i",{class:i===3?"ref":null,style:"background:"+c}))),
+        el("span",{text:"above"}),
+        o.refLabel?el("em",{text:o.refLabel}):null
+      ].filter(Boolean))
+    : el("div",{class:"hm-scale"},[
+        el("span",{text:fmtV(mn)+unit}),
+        el("span",{class:"sw"},SEQ.map(c=>el("i",{style:"background:"+c}))),
+        el("span",{text:fmtV(mx)+unit})
+      ]);
   box.appendChild(sc);
   return box;
 }
@@ -3416,28 +3553,135 @@ function sec(title,meta){
 }
 function srcDot(k){return el("i",{class:"sd sd-"+k});}
 
+/* The real export is four days long. A smoothed area over four points draws a
+   curve the data cannot support, so a short series is drawn as what it is:
+   four readings, the selected one ringed, the reference as a dashed rule.
+   Longer series (an intra-day curve) keep the area. */
 function sparkline(vals,cur,ref){
-  const W=200,H=18,vv=vals.map(v=>v==null?0:v);
-  /* scale to the data's own range, not to zero - a 4-day trend around 11-12
-     flattens into a dead straight line on a 0-based axis */
-  const lo0=Math.min(...vv,ref==null?Infinity:ref), hi0=Math.max(...vv,ref||0);
-  const pad=(hi0-lo0)*0.3||Math.max(0.5,hi0*0.1);
+  const W=200,H=18,vv=vals.map(v=>(v==null||!isFinite(v))?null:v);
+  const nums=vv.filter(v=>v!=null);
+  if(!nums.length) return el("div",{class:"kc-spark"});
+  const refN=(ref!=null&&isFinite(ref))?ref:null;
+  const lo0=Math.min.apply(null,nums.concat(refN==null?[]:[refN]));
+  const hi0=Math.max.apply(null,nums.concat(refN==null?[]:[refN]));
+  const pad=(hi0-lo0)*0.3||Math.max(0.5,Math.abs(hi0)*0.1)||1;
   const mn=Math.max(0,lo0-pad), mx=hi0+pad;
   const X=i=>vv.length<2?W/2:W*i/(vv.length-1);
   const Y=v=>H-2-(H-6)*((v-mn)/((mx-mn)||1));
   const s=sv("svg",{viewBox:`0 0 ${W} ${H}`,preserveAspectRatio:"none","aria-hidden":"true"});
-  let d=`M0,${H}`;vv.forEach((v,i)=>d+=` L${X(i)},${Y(v)}`);d+=` L${W},${H} Z`;
-  s.appendChild(sv("path",{d,fill:CSSV("--s1"),opacity:".12"}));
-  let l="";vv.forEach((v,i)=>l+=(i?" L":"M")+X(i)+","+Y(v));
-  s.appendChild(sv("path",{d:l,fill:"none",stroke:CSSV("--s1"),"stroke-width":2,
-    "stroke-linejoin":"round","stroke-linecap":"round"}));
-  if(ref>0){const y=Y(ref);
+  if(refN!=null){const y=Y(refN);
     s.appendChild(sv("line",{x1:0,x2:W,y1:y,y2:y,stroke:CSSV("--rule"),
       "stroke-width":1,"stroke-dasharray":"3 3"}));}
-  if(cur!=null&&vv[cur]!=null)
-    s.appendChild(sv("circle",{cx:X(cur),cy:Y(vv[cur]),r:3.6,fill:CSSV("--s1"),
-      stroke:CSSV("--surface"),"stroke-width":2}));
+
+  if(vv.length<=6){
+    /* connector first, so no dot is painted over */
+    let prev=null;
+    vv.forEach((v,i)=>{
+      if(v==null){prev=null;return;}
+      if(prev!=null) s.appendChild(sv("line",{x1:X(prev),x2:X(i),y1:Y(vv[prev]),y2:Y(v),
+        stroke:CSSV("--rule"),"stroke-width":1.4}));
+      prev=i;});
+    vv.forEach((v,i)=>{
+      if(v==null){
+        /* an unmeasured day is a hollow mark on the axis, never a zero */
+        s.appendChild(sv("circle",{cx:X(i),cy:H-3,r:2,fill:"none",
+          stroke:CSSV("--hair"),"stroke-width":1.4}));
+        return;}
+      const on=(i===cur);
+      s.appendChild(sv("circle",{cx:X(i),cy:Y(v),r:on?3.6:2.6,
+        fill:on?CSSV("--s1"):CSSV("--surface"),
+        stroke:CSSV("--s1"),"stroke-width":on?2:1.6}));
+    });
+  }else{
+    const fl=vv.map(v=>v==null?0:v);
+    let d=`M0,${H}`;fl.forEach((v,i)=>d+=` L${X(i)},${Y(v)}`);d+=` L${W},${H} Z`;
+    s.appendChild(sv("path",{d,fill:CSSV("--s1"),opacity:".12"}));
+    let l="";fl.forEach((v,i)=>l+=(i?" L":"M")+X(i)+","+Y(v));
+    s.appendChild(sv("path",{d:l,fill:"none",stroke:CSSV("--s1"),"stroke-width":2,
+      "stroke-linejoin":"round","stroke-linecap":"round"}));
+    if(cur!=null&&vv[cur]!=null)
+      s.appendChild(sv("circle",{cx:X(cur),cy:Y(vv[cur]),r:3.6,fill:CSSV("--s1"),
+        stroke:CSSV("--surface"),"stroke-width":2}));
+  }
   return el("div",{class:"kc-spark"},[s]);
+}
+
+/* ---- card marks. Each one exists because a real card was showing a number
+   over 80px of white space, or showing the wrong shape for its figure. ---- */
+
+/* a countable set drawn as the set */
+function kUnits(o){
+  const total=Math.max(0,o.total|0), on=clamp(Math.round(o.on),0,total);
+  const cap=o.cap||20, n=total>cap?cap:total;
+  const onN=total?Math.round(on/total*n):0;
+  const w=el("div",{class:"ku"+(o.k?" "+o.k:"")});
+  for(let i=0;i<n;i++) w.appendChild(el("i",{class:i<onN?"on":"off"}));
+  if(total>n) w.appendChild(el("s",{text:"each ×"+fmt(total/n,1)}));
+  return w;
+}
+/* the declared list itself, not its cardinality */
+function kTags(list){
+  const t=el("div",{class:"ktags"});
+  (list||[]).filter(Boolean).slice(0,8).forEach(x=>t.appendChild(el("b",{text:String(x)})));
+  return t.childNodes.length?t:null;
+}
+/* where inside the total the quantity actually sits */
+function kMini(o){
+  const v=(o.vals||[]).map(x=>(x==null||!isFinite(x))?0:x);
+  if(!v.length) return null;
+  const mx=Math.max.apply(null,v.concat([o.max||0]))||1;
+  const hi=o.hi==null?-1:o.hi;
+  const bars=el("div",{class:"kmini"},v.map((x,i)=>
+    el("i",{class:i===hi?"hi":null,style:"height:"+clamp(x/mx*100,2,100)+"%"})));
+  const out=[bars];
+  if(o.labs) out.push(el("div",{class:"kmini-ax"},o.labs.map(l=>el("span",{text:l}))));
+  return el("div",{},out);
+}
+/* a mean with its spread, because a mean alone overstates what is known */
+function kRange(o){
+  const lo=o.lo, hi=o.hi, v=o.v, a=o.min==null?lo:o.min, b=o.max==null?hi:o.max;
+  if([lo,hi,v].some(x=>x==null||!isFinite(x))) return null;
+  const L=x=>clamp((x-a)/((b-a)||1)*100,0,100);
+  const box=el("div",{class:"krg"},[
+    el("i",{class:"tk"}),
+    el("i",{class:"sp",style:`left:${L(lo)}%;width:${Math.max(1,L(hi)-L(lo))}%`}),
+    el("i",{class:"mn",style:`left:${L(lo)}%`}),
+    el("i",{class:"mx",style:`left:${L(hi)}%`}),
+    el("i",{class:"vv",style:`left:${L(v)}%`})]);
+  const f=o.fmt||(x=>fmt(x,1));
+  return el("div",{},[box,el("div",{class:"krg-ax"},[
+    el("span",{text:"low "+f(lo)}),el("span",{text:"high "+f(hi)})])]);
+}
+/* a time as a position on the day */
+function kDay(o){
+  const a=(o.span&&o.span[0])||0, b=(o.span&&o.span[1])||1440;
+  const L=x=>clamp((x-a)/((b-a)||1)*100,0,100);
+  const kids=[];
+  if(o.gaps) o.gaps.forEach(g=>kids.push(el("s",{
+    style:`left:${L(g[0])}%;width:${Math.max(0.5,L(g[1])-L(g[0]))}%`})));
+  if(o.from!=null&&o.to!=null) kids.unshift(el("i",{
+    style:`left:${L(o.from)}%;width:${Math.max(1,L(o.to)-L(o.from))}%`}));
+  if(o.at!=null) kids.push(el("u",{style:`left:${L(o.at)}%`}));
+  return el("div",{},[el("div",{class:"kdb"+(o.k?" "+o.k:"")},kids),
+    el("div",{class:"km-ax"},[el("span",{text:hm(a)}),el("span",{text:hm(b)})])]);
+}
+/* how many of the four days of feed show this at all */
+function kDays(o){
+  const w=el("div",{class:"kdays"});
+  (o.on||[]).forEach((v,i)=>w.appendChild(el("i",{
+    class:(v?"on":"")+(i===o.cur?" cur":"")})));
+  if(o.lbl) w.appendChild(el("em",{text:o.lbl}));
+  return w;
+}
+/* the licensed band scale: the reading means nothing without its thresholds */
+function kBand(o){
+  const a=o.min, b=o.max, L=x=>clamp((x-a)/((b-a)||1)*100,0,100);
+  const kids=[el("i",{class:"tk"})];
+  (o.lines||[]).forEach(x=>kids.push(el("i",{class:"bl",style:`left:${L(x)}%`})));
+  kids.push(el("i",{class:"vv",style:`left:${L(o.v)}%`}));
+  const ax=el("div",{class:"kband-ax"},(o.lines||[]).concat([]).map(x=>
+    el("span",{style:`left:${L(x)}%`,text:fmt(x,2)})));
+  return el("div",{},[el("div",{class:"kband"},kids),ax]);
 }
 
 function kcard(o){
@@ -3468,15 +3712,46 @@ function kcard(o){
         el("span",{html:"seen <b>"+o.cmp.seenTxt+"</b>"}),
         el("span",{html:"declared <b>"+o.cmp.decTxt+"</b>"})])]));
   } else if(o.tri){
+    /* three cards that are three slices of one whole all show the whole and
+       emphasise their own slice, so a reader can see that they sum to 100 */
     const tot=o.tri.reduce((a,x)=>a+x.v,0)||1;
-    c.appendChild(el("div",{class:"kc-tri"},o.tri.map(x=>
-      el("i",{style:`flex:${x.v/tot};background:${x.c}`,title:x.k+" "+pc(x.v/tot*100)}))));
+    const hi=o.triHi==null?-1:o.triHi;
+    c.appendChild(el("div",{class:"kc-tri"},o.tri.map((x,i)=>
+      el("i",{class:hi<0?null:(i===hi?"hi":"dim"),
+        style:`flex:${x.v/tot};background:${x.c}`,title:x.k+" "+pc(x.v/tot*100)}))));
+    if(o.triAx) c.appendChild(el("div",{class:"kc-tri-ax"},o.tri.map((x,i)=>
+      el("i",{},[el("b",{style:"background:"+x.c+((hi>=0&&i!==hi)?";opacity:.3":"")}),
+        document.createTextNode(x.k+" "+pc(x.v/tot*100))]))));
+  } else if(o.band){
+    c.appendChild(kBand(o.band));
+  } else if(o.range){
+    const r=kRange(o.range); if(r) c.appendChild(r);
+  } else if(o.day){
+    c.appendChild(kDay(o.day));
+  } else if(o.units){
+    c.appendChild(kUnits(o.units));
+  } else if(o.mini){
+    const m=kMini(o.mini); if(m) c.appendChild(m);
   } else if(o.spark){
     c.appendChild(sparkline(o.spark.vals,o.spark.cur,o.spark.ref));
-  } else if(o.meter!=null){
-    c.appendChild(el("div",{class:"km "+(o.meterK||""),style:"margin-top:10px"},
-      [el("i",{style:"width:"+clamp(o.meter,0,100)+"%"})]));
+  } else if(o.meter!=null&&isFinite(o.meter)){
+    /* the reference is drawn, not implied: a meter with no reference is a
+       claim about a denominator nobody stated */
+    const mk=[el("i",{style:"width:"+clamp(o.meter,0,100)+"%"})];
+    if(o.meterRef!=null&&isFinite(o.meterRef))
+      mk.push(el("u",{style:"left:"+clamp(o.meterRef,0,100)+"%"}));
+    c.appendChild(el("div",{class:"km "+(o.meterK||"")},mk));
+    if(o.meterAx) c.appendChild(el("div",{class:"km-ax"},
+      o.meterAx.map(t=>el("span",{html:t}))));
   }
+  /* secondary marks — a frequency across days, or the declared list itself,
+     can sit under any primary mark */
+  /* one card genuinely needs two marks: Active Time % is a slice of a whole
+     AND its own note says the sparkline tells a one-day dip from a pattern.
+     The chain picked tri and dropped the spark without a trace. */
+  if(o.spark&&o.tri) c.appendChild(sparkline(o.spark.vals,o.spark.cur,o.spark.ref));
+  if(o.days) c.appendChild(kDays(o.days));
+  if(o.tags){const t=kTags(o.tags); if(t) c.appendChild(t);}
 
   const f=el("div",{class:"kc-f"});
   if(o.chip) f.appendChild(el("span",{class:"kc-chip t-"+(o.chip.tone||"n"),
@@ -4008,8 +4283,8 @@ function pageCentreOverview(){
       note:"Highest 2-minute mean any single classroom reached. The export is already a per-minute mean over sampled frames, so this is a floor on the true instantaneous peak."}),
     kcard({lbl:"Active Classrooms",cam:{space:darkCam(),signal:"headcount"},src:"measured",val:R.running,unit:"of "+R.rooms,
       tone:rygTone(R.running,R.rooms),
-      meter:R.rooms?R.running/R.rooms*100:0,
-      meterK:R.running===R.rooms?"ok":R.running/R.rooms>=.6?"warn":"crit",
+      units:{on:R.running,total:R.rooms,
+        k:R.running===R.rooms?"ok":R.running/R.rooms>=.6?"warn":"crit"},
       chip:R.running<R.rooms?{t:(R.rooms-R.running)+(R.rooms-R.running>1?" spaces inactive":" space inactive"),tone:"crit"}
                             :{t:"All spaces active",tone:"ok"},
       note:"A classroom counts as active once more than "+COHORT_THR+" people are held together in it — the spec's own definition of a batch."}),
@@ -4027,16 +4302,18 @@ function pageCentreOverview(){
     kcard({lbl:"Accreditation Validity",src:"declared",val:fmt(acc),unit:"days left",
       tone:acc>90?"good":acc>30?"warn":"crit",
       meter:clamp(acc/365*100,0,100),meterK:acc>90?"ok":acc>30?"warn":"crit",
+      meterRef:90/365*100,meterAx:["renewal at <b>90 d</b>","365 d"],
       chip:acc>90?{t:"Valid",tone:"ok"}:{t:"Renewal due",tone:"warn"},
       foot:CTR?CTR.code:centresIn()[0].accOn}),
     kcard({lbl:"Sector Authorization Count",src:"declared",val:sectors.length,unit:"sectors",
-      foot:sectors.join(" · ")}),
+      tags:sectors}),
     kcard({lbl:"Declared Space Count",src:"declared",val:spacesIn.length,unit:"rooms",
-      foot:[...new Set(spacesIn.map(s=>s.type))].length+" categories"}),
+      tags:[...new Set(spacesIn.map(s=>s.type))].map(t=>
+        spacesIn.filter(s=>s.type===t).length+" "+t)}),
     kcard({lbl:"Camera Coverage Ratio",cam:{space:busiestRoom(),signal:"feed"},src:"declared",val:pc(cams.length/spacesIn.length*100),
       tone:rygTone(cams.length/spacesIn.length,1),
-      cmp:{seen:cams.length,declared:spacesIn.length,
-        seenTxt:cams.length+" watched",decTxt:spacesIn.length+" declared"},
+      units:{on:cams.length,total:spacesIn.length,
+        k:cams.length===spacesIn.length?"ok":"warn"},
       chip:uncovered.length?{t:uncovered.length+" unmonitored",tone:"warn"}:{t:"Complete",tone:"ok"},
       foot:uncovered.map(s=>s.short).join(", "),
       note:"This ratio is the ceiling on everything else in the dashboard — nothing here can speak to a space with no camera."}),
@@ -4046,13 +4323,18 @@ function pageCentreOverview(){
   v.appendChild(kg(4,[
     kcard({lbl:"Total Enrolled Headcount",src:"declared",val:fmt(totEnr),unit:"learners",
       cmp:{seen:totEnr,declared:totSan,seenTxt:fmt(totEnr),decTxt:fmt(totSan)+" seats"}}),
-    kcard({lbl:"Total Sanctioned Capacity",src:"declared",val:fmt(totSan),unit:"seats"}),
+    kcard({lbl:"Total Sanctioned Capacity",src:"declared",val:fmt(totSan),unit:"seats",
+      mini:{vals:cs.map(c=>c.sanctioned),labs:cs.map(c=>c.code)},
+      foot:"approved seats per course"}),
     kcard({lbl:"Center-Wide Vacant Seats",src:"declared",val:fmt(totSan-totEnr),unit:"unfilled",
-      tone:rygTone(totEnr/totSan,1)}),
+      tone:rygTone(totEnr/totSan,1),
+      mini:{vals:cs.map(c=>c.sanctioned-c.enrolled),labs:cs.map(c=>c.code),
+        hi:cs.reduce((b,c,i,a)=>(c.sanctioned-c.enrolled)>(a[b].sanctioned-a[b].enrolled)?i:b,0)},
+      foot:"where the vacancy sits"}),
     kcard({lbl:"Center-Wide Enrollment Utilization Rate",src:"declared",val:pc(totEnr/totSan*100),
       tone:rygTone(totEnr/totSan*100,85),
       meter:totEnr/totSan*100,meterK:totEnr/totSan>=.85?"ok":"warn",
-      foot:"Registration record"}),
+      meterRef:85,meterAx:["registration record","<b>85%</b> reference"]}),
   ]));
 
   (function(){
@@ -4067,21 +4349,29 @@ function pageCentreOverview(){
     v.appendChild(kg(4,[
       kcard({lbl:"Trade Concordance Rate",cam:{space:mismatchCam(),signal:"trade"},src:"modelled",val:pc(rate),
         tone:rygTone(rate,90),meter:rate,meterK:rate>=90?"ok":rate>=70?"warn":"crit",
+        meterRef:90,meterAx:["observed concordance","<b>90%</b> reference"],
         chip:bad.length?{t:bad.length+" space mismatched",tone:"crit"}
                        :{t:"All observed spaces concordant",tone:"ok"},
         note:"Share of spaces where the trade read from the frames matches the trade declared at accreditation. The declared value is locked once submitted; the observed value is never supplied by the centre."}),
       kcard({lbl:"Trades Not Matching Allocation",cam:{space:mismatchCam(),signal:"trade"},src:"modelled",val:bad.length,
         unit:"of "+obs.length+" observed",tone:bad.length?"crit":"good",
-        foot:bad.length?bad.map(m=>CO[m.dec].name+" → "+TC[m.obs].n).join(" · "):"None",
+        tags:bad.length?bad.map(m=>CO[m.dec].name+" → "+TC[m.obs].n):null,
+        foot:bad.length?null:"None",
         note:"A space running a trade other than the one it was sanctioned for."}),
       kcard({lbl:"Spaces Without a Session",cam:{space:darkCam(),signal:"headcount"},src:"measured",val:un.length,
         unit:"of "+ms.length+" spaces",tone:un.length?"crit":"good",
+        units:{on:ms.length-un.length,total:ms.length,k:un.length?"warn":"ok"},
         foot:un.length?rooms.filter(r=>{const m=tradeMatch(r);return m&&m.state==="unobserved";})
               .map(r=>SP[r].short).join(" · "):"None",
         note:"No cohort was held here across the four days of feed, so no trade could be read."}),
       kcard({lbl:"Mean Classifier Confidence",cam:{space:busiestRoom(),signal:"trade"},src:"modelled",val:pc(conf),
-        tone:rygTone(conf,85),meter:conf,meterK:conf>=85?"ok":"warn",
-        foot:obs.length+" spaces carrying a session"}),
+        tone:rygTone(conf,85),
+        range:obs.length?{v:conf,
+          lo:Math.min.apply(null,obs.map(m=>m.conf*100)),
+          hi:Math.max.apply(null,obs.map(m=>m.conf*100)),
+          min:50,max:100,fmt:x=>pc(x)}:null,
+        foot:obs.length+" spaces carrying a session",
+        note:"Mean of the per-space classifier confidences, with the lowest and highest drawn beside it. A mean alone would let one confident room cover for a room the model is guessing at."}),
     ]));
     v.appendChild(concordPanel());
   })();
@@ -4197,12 +4487,16 @@ function pageAttendance(){
     return rs.reduce((a,r)=>a+(r.activeMin||0),0)/tot*100;
   });
   const lowDays=actByDay.filter(x=>x<40).length;
+  /* Active, Unsupervised and Idle are three slices of one day. All three cards
+     draw the same whole and emphasise their own slice, so a reader can see
+     that they sum instead of reading three unrelated percentages. */
+  const ZTRI=[{k:"Active",v:zAct,c:ST.good},{k:"Unsupervised",v:zUns,c:ST.warning},
+              {k:"Idle",v:zIdl,c:CSSV("--rule")}];
   v.appendChild(sec("Active Hours & Instructor Presence","proposed instructor detector · share of the observed day"));
   v.appendChild(kg(4,[
     kcard({lbl:"Active Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pAct),tone:rygTone(pAct,75),
-      tri:[{k:"Active",v:zAct,c:ST.good},{k:"Unsupervised",v:zUns,c:ST.warning},
-           {k:"Idle",v:zIdl,c:CSSV("--rule")}],
+      tri:ZTRI,triHi:0,triAx:true,
       spark:{vals:actByDay,cur:FEED_DATES.indexOf(d),ref:75},
       chip:lowDays>=3?{t:"low on "+lowDays+" of "+FEED_DATES.length+" days — pattern, act",tone:"crit"}
           :(pAct<40?{t:"single-day dip — watch, don't act",tone:"warn"}
@@ -4210,17 +4504,19 @@ function pageAttendance(){
       note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),
     kcard({lbl:"Unsupervised Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pUns),tone:pUns>10?"crit":pUns>5?"warn":"good",
-      meter:clamp(pUns,0,100),meterK:pUns>10?"crit":pUns>5?"warn":"ok",
+      tri:ZTRI,triHi:1,
       chip:pUns>0?{t:"learning that should be happening",tone:"warn"}:{t:"none observed",tone:"ok"},
       note:"Share of the day a room had a cohort present but no instructor."}),
     kcard({lbl:"Idle Time %",src:"modelled",cam:{space:busiestRoom(),signal:"headcount"},
       val:pc(pIdl),tone:pIdl>40?"crit":pIdl>25?"warn":"good",
-      meter:clamp(pIdl,0,100),meterK:pIdl>40?"crit":pIdl>25?"warn":"ok",
+      tri:ZTRI,triHi:2,
       foot:"nobody in the room at all"}),
     kcard({lbl:"Instructor Presence Timeline",src:"modelled",
       cam:{space:busiestRoom(),signal:"instructor"},
       val:live.length,unit:"of "+cs.length+" rooms",
       tone:rygTone(live.length,cs.length),
+      units:{on:live.length,total:cs.length,
+        k:live.length===cs.length?"ok":"warn"},
       chip:{t:"sampled every 5–10 min",tone:"n"},
       foot:"brief step-outs merged into Present"}),
   ]));
@@ -4252,6 +4548,7 @@ function pageAttendance(){
   v.appendChild(sec("Triangulated Attendance","enrolment roll · biometric · camera"));
   v.appendChild(kg(3,[
     kcard({lbl:"Enrolled",src:"declared",val:fmt(totEnr),unit:"on the register",
+      mini:{vals:enr,labs:cs.map(c=>c.code)},
       foot:"declared at accreditation"}),
     kcard({lbl:"Biometric Attendance Count",src:"biometric",val:fmt(totAeb),unit:"AEBAS",
       cmp:{seen:totAeb,declared:totEnr,seenTxt:fmt(totAeb),decTxt:fmt(totEnr)+" enrolled"},
@@ -4307,6 +4604,7 @@ function pageAttendance(){
         rowLab:r=>SP[r].short+(courseOf(r)?" · "+courseOf(r).code:""),
         fmtV:x=>fmt(x,1),vlabel:"Mean attendance",
         colorOf:(v,ri)=>refCol(v,(courseOf(roomsIn()[ri])||{enrolled:20}).enrolled*0.75),
+        refLabel:"reference is 75% of each room's own enrolled roll",
         nullNote:"Camera was recording. No cohort crossed the "+COHORT_THR+"-person threshold."}),
       ()=>mkTable(["Room",...FEED_DATES.map(x=>DAYLBL[x])],
         roomsIn().map(r=>[SP[r].short,...FEED_DATES.map(x=>{const rr=D[x][r];
@@ -4367,6 +4665,7 @@ function pageAttendance(){
     ]));
     v.appendChild(kg(4,[
       kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
+        spark:{vals:cv.v,cur:rr.peakMin!=null?cv.idxOf(rr.peakMin):null},
         chip:(rr.avgIn&&rr.peak/rr.avgIn>1.8)
           ?{t:"peak "+fmt(rr.peak/rr.avgIn,1)+"× the mean",tone:"warn"}:null,
         foot:rr.peakMin!=null?"at "+hm(rr.peakMin):"",
@@ -4374,6 +4673,11 @@ function pageAttendance(){
       kcard({lbl:"First Cohort Detection",src:"measured",
         val:rr.firstMin!=null?hm(rr.firstMin):"never",
         tone:rr.running?null:"crit",
+        day:{span:[7*60,19*60],
+          from:rr.firstMin!=null?rr.firstMin:null,
+          to:rr.firstMin!=null?(rr.lastMin!=null?rr.lastMin:19*60):null,
+          at:rr.peakMin!=null?rr.peakMin:null,
+          k:rr.running?null:"warn"},
         chip:rr.running?{t:"session ran",tone:"ok"}:{t:"no session",tone:"crit"}}),
       kcard({lbl:"Avg Cohort Duration",src:"measured",val:hrs(rr.presentMin),unit:"h",
         cmp:{seen:rr.presentMin/60,declared:rr.committedMin/60,
@@ -4383,7 +4687,7 @@ function pageAttendance(){
         tone:(mi&&mi.coverage!=null)?rygTone(mi.coverage*100,85):null,
         meter:(mi&&mi.coverage!=null)?mi.coverage*100:null,
         meterK:(mi&&mi.coverage>0.85)?"ok":"warn",
-        foot:"of the time a cohort was in the room"}),
+        meterRef:85,meterAx:["instructor and cohort together","<b>85%</b> reference"]}),
     ]));
     if(mi) v.appendChild(cgrid(1,[
       cx("Instructor Presence by Trade"+(S.date===ALLD?" · latest day only":""),null,()=>presenceStrip(mi.bits,mi.from,mi.step),null,
@@ -4414,34 +4718,52 @@ function pageQuality(){
       tone:live.length?rygTone(avg(live.map(inter)),65):null,
       meter:live.length?avg(live.map(inter)):0,
       meterK:live.length&&avg(live.map(inter))>=65?"ok":"warn",
-      foot:"Moving or at the instruction zone"}),
+      meterRef:65,meterAx:["moving or at the instruction zone","<b>65%</b>"]}),
     kcard({lbl:"Equipment Utilization Rate",cam:{space:equipCam(),signal:"stations"},src:"modelled",
       val:equip.length?pc(avg(equip.map(equipV))):"—",
       tone:equip.length?rygTone(avg(equip.map(equipV)),70):null,
       meter:equip.length?avg(equip.map(equipV)):0,
       meterK:equip.length&&avg(equip.map(equipV))>=70?"ok":"warn",
-      foot:equip.length+" equipped spaces"}),
+      meterRef:70,meterAx:[equip.length+" equipped spaces","<b>70%</b>"]}),
     kcard({lbl:"Zone Utilization Rate",cam:{space:equipCam(),signal:"stations"},src:"modelled",
       val:equip.length?pc(avg(equip.map(r=>equipV(r)*0.94))):"—",
-      foot:"Per-station occupancy",
+      meter:equip.length?avg(equip.map(r=>equipV(r)*0.94)):null,
+      meterK:equip.length&&avg(equip.map(r=>equipV(r)*0.94))>=70?"ok":"warn",
+      meterRef:70,meterAx:["per-station occupancy","<b>70%</b>"],
       note:"Per-station occupancy inside a lab — which workbench actually had somebody at it. Needs spatial detection inside the room; the current feed reports one number per camera."}),
     kcard({lbl:"Workstation Utilization Rate",cam:{space:equipCam(),signal:"stations"},src:"modelled",
       val:(()=>{const c=equip.filter(r=>SP[r].type==="computer-lab");
         return c.length?pc(avg(c.map(equipV))):"—";})(),
-      foot:"computer labs"}),
+      meter:(()=>{const c=equip.filter(r=>SP[r].type==="computer-lab");
+        return c.length?avg(c.map(equipV)):null;})(),
+      meterK:(()=>{const c=equip.filter(r=>SP[r].type==="computer-lab");
+        return c.length&&avg(c.map(equipV))>=70?"ok":"warn";})(),
+      meterRef:70,meterAx:["computer labs","<b>70%</b> reference"]}),
     kcard({lbl:"Infra / Asset Readiness",src:"modelled",
       cam:{space:equipCam(),signal:"stations"},
+      /* a readiness check is a count of assets sighted, never a rate: the card
+         was rendering pc() under a note that says it is not a utilisation
+         figure, which is the same defect class as a tone: that contradicts its
+         own caption. Presence is now drawn as the committed assets themselves. */
       val:(()=>{const rooms=roomsIn().filter(r=>SP[r].stations>0);
         const committed=rooms.reduce((a,r)=>a+SP[r].stations,0);
-        const present=committed-1;   /* one welding booth not sighted in the mock */
-        return pc(committed?present/committed*100:0);})(),
+        return fmt(committed-1);})(),
+      unit:(()=>{const rooms=roomsIn().filter(r=>SP[r].stations>0);
+        return "of "+rooms.reduce((a,r)=>a+SP[r].stations,0)+" sighted";})(),
+      /* glyphs count EQUIPPED ROOMS, not individual stations: forty-seven
+         glyphs would wrap four rows deep and a scaled glyph would round the
+         one missing booth away entirely. One hollow room is the finding. */
+      units:(()=>{const rooms=roomsIn().filter(r=>SP[r].stations>0);
+        return {on:Math.max(0,rooms.length-1),total:rooms.length,k:"warn"};})(),
       tone:"warn",
       chip:{t:"1 welding booth not sighted",tone:"warn"},
-      foot:"committed assets visible in frame",
+      foot:"one glyph per equipped room",
       note:"Is the committed asset physically present and visible — a readiness check, not a utilisation rate. Some assets are legitimately unused in a given lesson (a GDA bed during dummy practice), so utilisation would mislead; presence cannot."}),
     kcard({lbl:"Classroom Interactivity Ratio",src:"modelled",
       val:theory.length?pc(avg(theory.map(inter))):"—",
-      foot:"where there is no equipment",
+      meter:theory.length?avg(theory.map(inter)):null,
+      meterK:theory.length&&avg(theory.map(inter))>=65?"ok":"warn",
+      meterRef:65,meterAx:["where there is no equipment","<b>65%</b>"],
       note:"Stands in for equipment utilisation in theory rooms, which have no machinery to measure."}),
   ]));
 
@@ -4476,6 +4798,7 @@ function pageQuality(){
         ()=>heat({rows:Array.from({length:nSt},(_,i)=>i+1),cols:hrsR,val:zval,
           rowLab:r=>(SP[zid].type==="computer-lab"?"PC-":"ST-")+String(r).padStart(2,"0"),
           fmtV:x=>fmt(x),unit:"%",vlabel:"Active share",colorOf:v=>refCol(v,70),
+          refLabel:"reference is 70% active",
           nullNote:"No reading for this station"}),null,
         "Which individual workbench or machine had somebody working at it, hour by hour. The 13:00 column drops to near zero — that is lunch."),
     ]));
@@ -4521,14 +4844,15 @@ function pageAssessment(){
     kcard({lbl:"Viva Completion Rate",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:pc(totV/totP*100),
       tone:rygTone(totV/totP*100,90),
       meter:totV/totP*100,meterK:totV/totP>=.9?"ok":"warn",
-      foot:"Five minutes or longer counts as complete"}),
+      meterRef:90,
+      meterAx:["five minutes or longer counts as complete","<b>90%</b>"]}),
   ]));
 
   AR.push(sec("Proctoring Integrity Signals"));
   AR.push(kg(2,[
     kcard({lbl:"People-on-System Ratio",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:fmt(maxPos,2),unit:"max",
       tone:maxPos>1.2?"crit":"good",
-      cmp:{seen:maxPos,declared:1,seenTxt:fmt(maxPos,2),decTxt:"1.00 expected"},
+      band:{v:maxPos,min:0.9,max:1.5,lines:[1,1.2]},
       chip:maxPos>1.2?{t:"would flag — possible sharing",tone:"crit"}
            :maxPos>1.02?{t:"≈1 · assessor at a screen",tone:"ok"}
            :{t:"within expectation",tone:"ok"},
@@ -4536,7 +4860,7 @@ function pageAssessment(){
     kcard({lbl:"Assessor Presence Rate",cam:{space:"nc-1",signal:"viva",cap:22},src:"modelled",val:pc(invigAvg),
       tone:rygTone(invigAvg,88),
       meter:invigAvg,meterK:invigAvg>=88?"ok":invigAvg>=72?"warn":"crit",
-      foot:"of the exam window"}),
+      meterRef:88,meterAx:["of the exam window","<b>88%</b>"]}),
   ]));
 
   AL.push(cgrid(1,[
@@ -4551,17 +4875,22 @@ function pageAssessment(){
       "Candidates detected present on assessment day against the eligible list for that assessment."),
   ]));
   AR.push(sec("Round Durations","three assessment rounds"));
+  /* one ceiling across all three rounds, so the bars compare directly */
+  const rdTheory=avg(A.map(a=>a.theoryDur)), rdViva=avg(A.map(a=>a.vivaAvg)),
+        rdPrac=avg(A.map(a=>a.practicalDur));
+  const rdMax=niceMax(Math.max(rdTheory,rdViva,rdPrac));
+  const rdAx=t=>[t,"<b>"+fmt(rdMax)+" min</b> scale"];
   AR.push(kg(3,[
     kcard({lbl:"Theory Duration",src:"modelled",
-      val:fmt(avg(A.map(a=>a.theoryDur)),0),unit:"min",
-      foot:"pen-and-paper round"}),
+      val:fmt(rdTheory,0),unit:"min",
+      meter:rdTheory/rdMax*100,meterAx:rdAx("pen-and-paper round")}),
     kcard({lbl:"Average Viva Duration",src:"modelled",
       cam:{space:"nc-1",signal:"viva",cap:22},
-      val:fmt(avg(A.map(a=>a.vivaAvg)),1),unit:"min",
-      foot:"per detected candidate-assessor pair"}),
+      val:fmt(rdViva,1),unit:"min",
+      meter:rdViva/rdMax*100,meterAx:rdAx("per detected candidate-assessor pair")}),
     kcard({lbl:"Practical Duration",src:"modelled",
-      val:fmt(avg(A.map(a=>a.practicalDur)),0),unit:"min",
-      foot:"machine-based demonstration, individual or group"}),
+      val:fmt(rdPrac,0),unit:"min",
+      meter:rdPrac/rdMax*100,meterAx:rdAx("machine-based demonstration")}),
   ]));
   AR.push(cgrid(1,[
     cx("Assessor Presence by Trade",null,
@@ -4642,16 +4971,23 @@ function pageCoverage(){
   v.appendChild(kg(4,[
     kcard({lbl:"Camera Coverage Ratio",cam:{space:busiestRoom(),signal:"feed"},src:"declared",val:pc(cams.length/spacesIn.length*100),
       tone:rygTone(cams.length/spacesIn.length,1),
-      cmp:{seen:cams.length,declared:spacesIn.length,
-        seenTxt:cams.length+" watched",decTxt:spacesIn.length+" declared"},
+      /* the same glyph row as the Overview page, deliberately identical so a
+         second reading is recognised rather than re-read */
+      units:{on:cams.length,total:spacesIn.length,
+        k:cams.length===spacesIn.length?"ok":"warn"},
       chip:uncovered.length?{t:uncovered.map(s=>s.short).join(", "),tone:"warn"}:{t:"full",tone:"ok"}}),
     kcard({lbl:"Feed Availability",cam:{space:busiestRoom(),signal:"feed"},src:"measured",
       val:p?fmt((p.to-p.from)/60,1):"—",unit:"h of 24",
       tone:p&&p.full?"good":"warn",
-      meter:p?(p.to-p.from)/1440*100:0,meterK:p&&p.full?"ok":"warn",
+      day:p?{span:[0,1440],from:p.from,to:p.to,k:p.full?null:"warn"}:null,
       chip:p&&p.full?{t:"full day",tone:"ok"}:{t:hm(p.from)+"–"+hm(p.to),tone:"warn"}}),
     kcard({lbl:"Minutes Without Feed",cam:{space:busiestRoom(),signal:"feed"},src:"measured",val:fmt(totalNoData),unit:"min",
       tone:totalNoData>600?"warn":"good",
+      meter:(()=>{const win=(DAY_TO-DAY_FROM)*Math.max(1,cams.length);
+        return clamp(totalNoData/win*100,0,100);})(),
+      meterK:totalNoData>600?"warn":"ok",
+      meterAx:["of "+fmt((DAY_TO-DAY_FROM)*Math.max(1,cams.length))+
+               " camera-minutes in the teaching day",""],
       chip:{t:fmt(totalGap)+" dropped mid-window",tone:totalGap>30?"warn":"n"},
       foot:"07:00–19:00, all cameras",
       note:"Every minute of the teaching day with no row at all — held as unknown, never counted as an empty room."}),
@@ -4661,6 +4997,8 @@ function pageCoverage(){
       tone:(()=>{const o=offStats(d);return o&&o.camMin>120?"crit":o&&o.camMin>30?"warn":"good";})(),
       chip:(()=>{const o=offStats(d);return o&&o.worst&&o.worstMin>0
         ?{t:"worst: "+SP[o.worst].short+" · "+fmt(o.worstMin)+" min",tone:"warn"}:null;})(),
+      days:{on:FEED_DATES.map(x=>{const o=offStats(x);return !!(o&&o.camMin>30);}),
+        cur:FEED_DATES.indexOf(d),lbl:"days a camera was off"},
       foot:"minutes with some cameras dark while others streamed",
       note:"Wall-clock minutes in which at least one camera was dark while the rest of the centre kept streaming — the server was up, so the camera itself was off. Frequency across days decides intentional vs technical."}),
     kcard({lbl:"Server-Off Minutes",src:"measured",
@@ -4669,9 +5007,13 @@ function pageCoverage(){
       chip:(()=>{const n=FEED_DATES.filter(x=>{const o=offStats(x);return o&&o.srvMin>10;}).length;
         return {t:n+" of "+FEED_DATES.length+" days — "+(n>=3?"pattern":"isolated"),
                 tone:n>=3?"crit":"ok"};})(),
+      days:{on:FEED_DATES.map(x=>{const o=offStats(x);return !!(o&&o.srvMin>10);}),
+        cur:FEED_DATES.indexOf(d),lbl:"days the server was down"},
       foot:"every camera dark at once",
       note:"All cameras missing simultaneously — the recording server (or power) was down, not one camera. A repeated pattern here is a non-compliance finding to report."}),
     kcard({lbl:"Overnight Baseline Reading",src:"measured",val:fmt(nightAvg,2),unit:"persons",
+      range:{v:nightAvg,lo:Math.min.apply(null,rows.map(r=>r.nightAvg==null?0:r.nightAvg)),
+        hi:nightMax,min:0,max:Math.max(1,nightMax*1.15),fmt:x=>fmt(x,2)},
       chip:{t:"peak "+fmt(nightMax,1),tone:"n"},
       foot:"21:00–06:00, all cameras",
       note:"What the detector reports with the building empty. Most classroom cameras read a true zero; one does not, and that one inflates every figure from its room."}),
@@ -4702,6 +5044,8 @@ function pageCoverage(){
     v.appendChild(kg(3,cRooms.map(c=>{
       const r=D[d][c];
       return kcard({lbl:SP[c].name,src:"measured",val:fmt(r.peak,1),unit:"busiest",
+        day:{span:[7*60,19*60],from:r.cov?r.cov[0]:null,to:r.cov?r.cov[1]:null,
+          at:r.peakMin!=null?r.peakMin:null},
         foot:hrs(r.anyMin)+"h with anyone present",
         chip:{t:fmt(r.personMin)+" people-minutes",tone:"n"},
         note:"Nobody is enrolled to a corridor, so the "+COHORT_THR+"-person batch threshold does not apply. Presence here is counted from 0.75 upward."});
@@ -4805,8 +5149,16 @@ function buildDeck(host){
     if(!s0||(s0.h+g.h>avail&&s0.groups.length)){s0={groups:[],h:0};slides.push(s0);}
     s0.groups.push(g);s0.h+=g.h;
   });
-  if(slides.length<2){                    /* nothing to page — leave it alone */
-    S.slideN=1;S.slide=0;return;
+  if(slides.length<2){
+    /* nothing to page — but it still has to fill the screen it is shown on.
+       min-height, not height: a camera drawer opening later must be able to
+       grow the page rather than spill past a frozen frame. */
+    S.slideN=1;S.slide=0;
+    if(page.querySelector(".geo,.duo,.cg,.panel")){
+      page.classList.add("solo");
+      page.style.minHeight=Math.max(320,innerHeight-top-20)+"px";
+    }
+    return;
   }
 
   const deck=el("div",{class:"deck"});

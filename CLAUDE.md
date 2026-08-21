@@ -229,7 +229,12 @@ how a stylesheet ends up with three corner radii for one row of a card. Removed:
 (`.pv*`/`.pvkey`/`.allmod`, superseded by `.sd`/`.skey`), the standalone vision panel
 (`.vstrip`/`.vs-*`/`.sig*`/`.thumb*`, superseded by the camera drawer), and the pre-slide-deck scaffold
 (`.page-head`, `.band-head`, `.filterbar`, `.f-push`, `.mockbadge`, `.verdict*`, `.finds*`, `.flags*`,
-`.tmix*`, `.dark-call`, `.tickmark`, `.fitw`, `.geo-col`, `.dl-2`, `.num`). Net −280 lines.
+`.tmix*`, `.dark-call`, `.tickmark`, `.fitw`, `.geo-col`, `.dl-2`, `.num`), and the pre-`cx()` chart
+header (`.chart-h`, `.chart-sub`) — which the new inline-control family had itself listed in its
+selector, so the family rule written to remove drift was pointing at a class nobody emits. Net −290
+lines, 305 class names down to 230. The 19 names the checker still flags are all built by
+concatenation (`"b-"+tone`, `"kg n"+n`, `"cg c"+n`, `"kc-chip t-"+tone`) plus `.g3`/`.g4`, which belong
+to the live `.grid`/`.cell` system.
 
 **Two rules for doing this safely, both learned the hard way in this pass:**
 
@@ -238,7 +243,12 @@ how a stylesheet ends up with three corner radii for one row of a card. Removed:
    an element selector and never appeared in the orphan list. Every page lost its horizontal padding
    and the first card's left rail clipped at x=0. It was caught by *looking at a screenshot*, not by
    any of the numeric checks — which is the argument for still looking.
-2. **Never delete a block by comment boundary without diffing the selectors.** The two rules that make
+2. **The off-screen-slide trap bites measurement code too, not just ink-bottom checks.** A padding
+   check that did `document.querySelector('.kc')` reported 75 failures across every scope and day: it
+   was measuring slide 0, which `translateX` has pushed off to the left, whenever the visible slide was
+   not slide 0. Always query **inside the slide you are looking at**. Both false-defect sweeps in this
+   file's history now trace to measuring the wrong node rather than the wrong moment.
+3. **Never delete a block by comment boundary without diffing the selectors.** The two rules that make
    the "Measured only" toggle do anything (`body.focus-measured .is-modelled`) sit between the dead v1
    legend and the dead `.pvkey` block. An earlier audit already found that toggle to be a no-op once;
    deleting neighbours is a second way to re-create the same defect. Diff old-vs-new selector sets and

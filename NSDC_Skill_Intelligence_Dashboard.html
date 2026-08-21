@@ -64,7 +64,7 @@
    opens the camera behind the figure. The button keeps a border and a hover
    state, which is what separates an affordance from a label — not a different
    shape language. */
-.kc-chip,.kc-d,.kc-cam,.cx-h .tv,.chart-h .tv{
+.kc-chip,.kc-d,.kc-cam,.cx-h .tv{
   height:var(--h-inline);
   display:inline-flex;align-items:center;
   border-radius:var(--r-pill);
@@ -73,8 +73,8 @@
   border:1px solid transparent;   /* chips too, so the heights match exactly */
   box-sizing:border-box;
 }
-.kc-cam,.cx-h .tv,.chart-h .tv{border-color:var(--rule);cursor:pointer}
-.kc-cam:hover,.cx-h .tv:hover,.chart-h .tv:hover{
+.kc-cam,.cx-h .tv{border-color:var(--rule);cursor:pointer}
+.kc-cam:hover,.cx-h .tv:hover{
   border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 
 /* ---------- chrome control family ---------- */
@@ -105,7 +105,6 @@ body{
   font-size:10px;text-transform:uppercase;letter-spacing:.1em;
   font-weight:650;color:var(--muted);
 }
-.micro-ink{color:var(--ink-2)}
 
 /* ---------- masthead ---------- */
 .masthead{
@@ -150,8 +149,6 @@ select{
 select:focus-visible,
 .ghost:focus-visible,
 .tab:focus-visible,
-.chart-h .tv:focus-visible,
-.thumb:focus-visible,
 .tl-btn:focus-visible,
 .tl-speed:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
 .hm-c:focus-visible,
@@ -199,12 +196,6 @@ main{padding:14px 22px 18px;max-width:1560px;margin-inline:auto;width:100%;min-h
 @media(max-width:1180px){.g4{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:920px){.g4,.g3,.g2{grid-template-columns:1fr}.cell{border-right:0}}
 
-/* ---------- chart card ---------- */
-.chart-h{display:flex;align-items:baseline;gap:9px;margin-bottom:2px}
-.chart-h h3{font-size:13px;font-weight:660;margin:0;letter-spacing:-.005em}
-.chart-h .tv{margin-left:auto;font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;font-weight:650;color:var(--muted);background:none;border:1px solid var(--hair);border-radius:2px;padding:2px 6px;cursor:pointer;font-family:inherit}
-.chart-h .tv:hover{color:var(--accent);border-color:var(--accent)}
-.chart-sub{font-size:11.5px;color:var(--muted);margin:0 0 10px;max-width:66ch}
 .legend{display:flex;gap:13px;flex-wrap:wrap;margin:0 0 9px}
 .legend i{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--ink-2);font-style:normal}
 .legend i b{width:9px;height:9px;border-radius:2px;flex:none}

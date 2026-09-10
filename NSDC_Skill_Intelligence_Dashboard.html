@@ -403,6 +403,9 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .kc.b-warn{border-left-color:var(--warning)}
 .kc.b-crit{border-left-color:var(--critical)}
 
+/* the mark block takes the slack the footnote used to leave as a hole */
+.kc-m{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:0}
 .kc-h{display:flex;align-items:center;gap:6px;min-height:14px;flex:none}
 .kc-h{align-items:flex-start}
 .kc-h u{text-decoration:none;font-size:10.5px;text-transform:uppercase;letter-spacing:.085em;
@@ -439,8 +442,6 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   white-space:normal}
 
-.kc-spark{margin-top:4px;height:18px}
-.kc-spark svg{display:block;width:100%;height:18px;overflow:visible}
 
 /* declared vs seen — one metaphor, repeated */
 .kc-cmp{margin-top:10px}
@@ -749,6 +750,11 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
    leaving a dead band under them */
 .slide.centered{justify-content:space-evenly}
 .slide.centered .sec:not(:first-child){margin-top:0}
+/* a heading and the row it labels are one block, and the block is what the
+   slide spaces out — proximity, not an even sprinkle */
+.slide.centered>.grp{display:flex;flex-direction:column;flex:1 1 auto;max-height:205px}
+.slide.centered>.grp>.kg{flex:1;min-height:0}
+.slide.centered>.grp>.sec{margin-bottom:7px}
 .duo{display:grid;grid-template-columns:var(--duo,minmax(0,1.25fr) minmax(0,1fr));
   gap:16px;align-items:start;margin-bottom:2px}
 .duo>section{min-width:0;display:flex;flex-direction:column}
@@ -771,7 +777,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   background:var(--surface);color:var(--ink-2);white-space:nowrap;flex:none}
 .kc-cam:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .kc-cam[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
-.kc-cam i{width:6px;height:6px;border-radius:50%;background:var(--s1);flex:none}
+.kc-cam i{width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none}
 .kc-cam[aria-expanded="true"] i{background:#fff}
 
 .camdrawer{margin:2px 0 14px;border:1px solid #223449;border-radius:3px;overflow:hidden;
@@ -870,7 +876,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
    ramp; the reference is a rule, not a hint. */
 .km{position:relative;height:8px;margin-top:9px;background:var(--surface-2);
   border:1px solid var(--hair);border-radius:2px}
-.km>i{position:absolute;left:0;top:0;bottom:0;background:var(--s1);border-radius:1px 0 0 1px}
+.km>i{position:absolute;left:0;top:0;bottom:0;background:var(--muted);border-radius:1px 0 0 1px}
 .km.ok{background:#eaf7ea}   .km.ok>i{background:var(--good)}
 .km.warn{background:#fdf6e6} .km.warn>i{background:var(--warning)}
 .km.crit{background:#fbeeee} .km.crit>i{background:var(--critical)}
@@ -885,7 +891,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 /* a countable set is shown as the set. "6 of 8" as eight glyphs reads from
    the back of a room and cannot raise the question "per cent of what?". */
 .ku{display:flex;flex-wrap:wrap;gap:3px;margin-top:9px;align-items:center}
-.ku i{width:13px;height:13px;border-radius:2px;background:var(--s1);flex:none}
+.ku i{width:13px;height:13px;border-radius:2px;background:var(--ink-2);flex:none}
 .ku i.off{background:transparent;border:1.5px solid var(--rule)}
 /* the status class must not repaint the hollow glyphs: an "off" unit is the
    room nobody is watching, and colouring it in erases the whole point */
@@ -903,19 +909,24 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 
 /* a per-item spread under a centre-wide total: which course holds the seats,
    where the vacancy actually is */
-.kmini{display:flex;align-items:flex-end;gap:3px;height:26px;margin-top:9px}
-.kmini i{flex:1;min-width:3px;background:var(--q3);border-radius:1px 1px 0 0;
+.kmini{position:relative;display:flex;align-items:flex-end;gap:3px;height:28px;margin-top:9px}
+.kmini i{flex:1;min-width:3px;background:var(--rule);border-radius:1px 1px 0 0;
   align-self:flex-end}
-.kmini i.hi{background:var(--s1)}
+.kmini i.hi{background:var(--ink-2)}
+.kmini i.na{height:100%;border-radius:1px;
+  background:repeating-linear-gradient(45deg,var(--hair) 0 2px,transparent 2px 5px)}
+.kmini u{position:absolute;left:0;right:0;height:0;text-decoration:none;
+  border-top:1px dashed var(--ink-2)}
 .kmini-ax{display:flex;gap:3px;margin-top:3px}
 .kmini-ax span{flex:1;min-width:0;font-size:9px;color:var(--muted);text-align:center;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
+.kmini-ax span.hi{color:var(--ink);font-weight:700}
 
 /* a mean is not a distribution. A confidence or a floor reading gets its
    spread drawn, so nobody reads the average as the whole story. */
 .krg{position:relative;height:20px;margin-top:9px}
 .krg .tk{position:absolute;left:0;right:0;top:9px;height:2px;background:var(--hair)}
-.krg .sp{position:absolute;top:7px;height:6px;background:var(--q2);border-radius:3px}
+.krg .sp{position:absolute;top:7px;height:6px;background:var(--hair);border-radius:3px}
 .krg .mn,.krg .mx{position:absolute;top:4px;height:12px;width:1.5px;background:var(--rule)}
 .krg .vv{position:absolute;top:3px;width:3px;height:14px;margin-left:-1.5px;
   background:var(--ink);border-radius:1px}
@@ -926,7 +937,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
    busiest moment in a corridor all live on the same day rail. */
 .kdb{position:relative;height:11px;margin-top:9px;background:var(--surface-2);
   border:1px solid var(--hair);border-radius:2px;overflow:hidden}
-.kdb>i{position:absolute;top:0;bottom:0;background:var(--s1);border-radius:1px}
+.kdb>i{position:absolute;top:0;bottom:0;background:var(--muted);border-radius:1px}
 .kdb.warn>i{background:var(--warning)}
 .kdb>u{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;
   background:var(--ink);text-decoration:none;overflow:visible}
@@ -1868,7 +1879,7 @@ function bars(opts){
        empty track reads as a broken chart, and "0 students" is the finding */
     const val=v[i];
     const bwid=val==null?0:Math.max(3,plotW*(Math.max(0,val)/mx));
-    const col=val==null?CSSV("--hair"):(val<0?CSSV("--q3"):(statusOf?statusOf(val,i):c));
+    const col=val==null?CSSV("--hair"):(val<0?CSSV("--ink-2"):(statusOf?statusOf(val,i):c));
     const r=Math.min(4,bwid);
     svg.appendChild(sv("path",{
       d:`M${PL},${y} L${PL+bwid-r},${y} Q${PL+bwid},${y} ${PL+bwid},${y+r} L${PL+bwid},${y+bh-r} Q${PL+bwid},${y+bh} ${PL+bwid-r},${y+bh} L${PL},${y+bh} Z`,
@@ -3234,6 +3245,7 @@ function buildCameraPanel(opt){
 const DAYLBL={};FEED_DATES.forEach(d=>{
   DAYLBL[d]=new Date(d+"T00:00:00").toLocaleDateString("en-GB",
     {weekday:"short",day:"2-digit",month:"short"});});
+const DAYSHORT={};FEED_DATES.forEach(d=>{DAYSHORT[d]=DAYLBL[d].split(" ")[0];});
 /* the aggregate key is built back in section 4b, but DAYLBL only exists here */
 DAYLBL[ALLD]="All days · "+DAYLBL[FEED_DATES[0]].replace(/^\w+ /,"")+
   " – "+DAYLBL[FEED_DATES[FEED_DATES.length-1]].replace(/^\w+ /,"");
@@ -3241,6 +3253,9 @@ DAYLBL[ALLD]="All days · "+DAYLBL[FEED_DATES[0]].replace(/^\w+ /,"")+
 /* red -> green scoring against a reference. Carried over from the first
    NSDC prototype, where it was doing the work three sentences do here. */
 const RYG=["--ryg0","--ryg1","--ryg2","--ryg3","--ryg4","--ryg5"].map(CSSV);
+/* the neutral channel — see the note above: never a judgement */
+const C_DECL=CSSV("--rule"), C_BIO=CSSV("--muted"), C_OBS=CSSV("--ink-2");
+const INK3=[CSSV("--ink"),CSSV("--ink-2"),CSSV("--muted")];
 const rygIdx=p=>p<.3?0:p<.5?1:p<.75?2:p<1?3:p<1.35?4:5;
 const rygScore=(v,ref,inv)=>!(ref>0)?1:(inv?(v<=0?2:ref/v):v/ref);
 const ryg=(v,ref,inv)=>RYG[rygIdx(rygScore(v,ref,inv))];
@@ -3257,59 +3272,6 @@ function sec(title,meta){
   return n;
 }
 function srcDot(k){return el("i",{class:"sd sd-"+k});}
-
-/* The real export is four days long. A smoothed area over four points draws a
-   curve the data cannot support, so a short series is drawn as what it is:
-   four readings, the selected one ringed, the reference as a dashed rule.
-   Longer series (an intra-day curve) keep the area. */
-function sparkline(vals,cur,ref){
-  const W=200,H=18,vv=vals.map(v=>(v==null||!isFinite(v))?null:v);
-  const nums=vv.filter(v=>v!=null);
-  if(!nums.length) return el("div",{class:"kc-spark"});
-  const refN=(ref!=null&&isFinite(ref))?ref:null;
-  const lo0=Math.min.apply(null,nums.concat(refN==null?[]:[refN]));
-  const hi0=Math.max.apply(null,nums.concat(refN==null?[]:[refN]));
-  const pad=(hi0-lo0)*0.3||Math.max(0.5,Math.abs(hi0)*0.1)||1;
-  const mn=Math.max(0,lo0-pad), mx=hi0+pad;
-  const X=i=>vv.length<2?W/2:W*i/(vv.length-1);
-  const Y=v=>H-2-(H-6)*((v-mn)/((mx-mn)||1));
-  const s=sv("svg",{viewBox:`0 0 ${W} ${H}`,preserveAspectRatio:"none","aria-hidden":"true"});
-  if(refN!=null){const y=Y(refN);
-    s.appendChild(sv("line",{x1:0,x2:W,y1:y,y2:y,stroke:CSSV("--rule"),
-      "stroke-width":1,"stroke-dasharray":"3 3"}));}
-
-  if(vv.length<=6){
-    /* connector first, so no dot is painted over */
-    let prev=null;
-    vv.forEach((v,i)=>{
-      if(v==null){prev=null;return;}
-      if(prev!=null) s.appendChild(sv("line",{x1:X(prev),x2:X(i),y1:Y(vv[prev]),y2:Y(v),
-        stroke:CSSV("--rule"),"stroke-width":1.4}));
-      prev=i;});
-    vv.forEach((v,i)=>{
-      if(v==null){
-        /* an unmeasured day is a hollow mark on the axis, never a zero */
-        s.appendChild(sv("circle",{cx:X(i),cy:H-3,r:2,fill:"none",
-          stroke:CSSV("--hair"),"stroke-width":1.4}));
-        return;}
-      const on=(i===cur);
-      s.appendChild(sv("circle",{cx:X(i),cy:Y(v),r:on?3.6:2.6,
-        fill:on?CSSV("--s1"):CSSV("--surface"),
-        stroke:CSSV("--s1"),"stroke-width":on?2:1.6}));
-    });
-  }else{
-    const fl=vv.map(v=>v==null?0:v);
-    let d=`M0,${H}`;fl.forEach((v,i)=>d+=` L${X(i)},${Y(v)}`);d+=` L${W},${H} Z`;
-    s.appendChild(sv("path",{d,fill:CSSV("--s1"),opacity:".12"}));
-    let l="";fl.forEach((v,i)=>l+=(i?" L":"M")+X(i)+","+Y(v));
-    s.appendChild(sv("path",{d:l,fill:"none",stroke:CSSV("--s1"),"stroke-width":2,
-      "stroke-linejoin":"round","stroke-linecap":"round"}));
-    if(cur!=null&&vv[cur]!=null)
-      s.appendChild(sv("circle",{cx:X(cur),cy:Y(vv[cur]),r:3.6,fill:CSSV("--s1"),
-        stroke:CSSV("--surface"),"stroke-width":2}));
-  }
-  return el("div",{class:"kc-spark"},[s]);
-}
 
 /* ---- card marks. Each one exists because a real card was showing a number
    over 80px of white space, or showing the wrong shape for its figure. ---- */
@@ -3330,16 +3292,28 @@ function kTags(list){
   (list||[]).filter(Boolean).slice(0,8).forEach(x=>t.appendChild(el("b",{text:String(x)})));
   return t.childNodes.length?t:null;
 }
-/* where inside the total the quantity actually sits */
+/* Where inside a total the quantity sits, and — since the dot strip went —
+   also the four days of feed. Bars carry no hue unless a reference exists to
+   score them against: colouring a reading red or green with nothing to score
+   it against asserts a judgement the data cannot support. Without one they
+   are grey, with the selected reading in ink. */
 function kMini(o){
-  const v=(o.vals||[]).map(x=>(x==null||!isFinite(x))?0:x);
-  if(!v.length) return null;
-  const mx=Math.max.apply(null,v.concat([o.max||0]))||1;
-  const hi=o.hi==null?-1:o.hi;
+  const v=(o.vals||[]).map(x=>(x==null||!isFinite(x))?null:x);
+  const nums=v.filter(x=>x!=null);
+  if(!nums.length) return null;
+  const mx=Math.max.apply(null,nums.concat([o.max||0,o.ref||0]))||1;
+  const hi=o.hi==null?(o.cur==null?-1:o.cur):o.hi;
   const bars=el("div",{class:"kmini"},v.map((x,i)=>
-    el("i",{class:i===hi?"hi":null,style:"height:"+clamp(x/mx*100,2,100)+"%"})));
+    x==null
+      /* an unmeasured day is hatched, never a zero-height bar */
+      ? el("i",{class:"na",title:"no reading"})
+      : el("i",{class:i===hi?"hi":null,
+          style:"height:"+clamp(x/mx*100,3,100)+"%"+
+                (o.colorOf?(";background:"+o.colorOf(x,i)):"")})));
+  if(o.ref>0) bars.appendChild(el("u",{style:"bottom:"+clamp(o.ref/mx*100,0,100)+"%"}));
   const out=[bars];
-  if(o.labs) out.push(el("div",{class:"kmini-ax"},o.labs.map(l=>el("span",{text:l}))));
+  if(o.labs) out.push(el("div",{class:"kmini-ax"},o.labs.map((l,i)=>
+    el("span",{class:i===hi?"hi":null,text:l}))));
   return el("div",{},out);
 }
 /* a mean with its spread, because a mean alone overstates what is known */
@@ -3407,12 +3381,14 @@ function kcard(o){
     [el("b",{text:blank?"Not applicable":o.val}),
      (!blank&&o.unit)?el("i",{text:o.unit}):null].filter(Boolean)));
 
+  /* every mark goes in here, and this is what absorbs the card's slack */
+  const mb=el("div",{class:"kc-m"});
   if(o.cmp){
     const {seen,declared}=o.cmp, mx=Math.max(seen,declared,1);
     const bar=el("div",{class:"kc-bar"},[
       el("i",{style:`width:${clamp(seen/mx*100,0,100)}%;background:${ryg(seen,declared)}`}),
       el("u",{style:`left:${clamp(declared/mx*100,0,100)}%`})]);
-    c.appendChild(el("div",{class:"kc-cmp"},[bar,
+    mb.appendChild(el("div",{class:"kc-cmp"},[bar,
       el("div",{class:"kc-cax"},[
         el("span",{html:"seen <b>"+o.cmp.seenTxt+"</b>"}),
         el("span",{html:"declared <b>"+o.cmp.decTxt+"</b>"})])]));
@@ -3421,42 +3397,38 @@ function kcard(o){
        emphasise their own slice, so a reader can see that they sum to 100 */
     const tot=o.tri.reduce((a,x)=>a+x.v,0)||1;
     const hi=o.triHi==null?-1:o.triHi;
-    c.appendChild(el("div",{class:"kc-tri"},o.tri.map((x,i)=>
+    mb.appendChild(el("div",{class:"kc-tri"},o.tri.map((x,i)=>
       el("i",{class:hi<0?null:(i===hi?"hi":"dim"),
         style:`flex:${x.v/tot};background:${x.c}`,title:x.k+" "+pc(x.v/tot*100)}))));
-    if(o.triAx) c.appendChild(el("div",{class:"kc-tri-ax"},o.tri.map((x,i)=>
+    if(o.triAx) mb.appendChild(el("div",{class:"kc-tri-ax"},o.tri.map((x,i)=>
       el("i",{},[el("b",{style:"background:"+x.c+((hi>=0&&i!==hi)?";opacity:.3":"")}),
         document.createTextNode(x.k+" "+pc(x.v/tot*100))]))));
   } else if(o.band){
-    c.appendChild(kBand(o.band));
+    mb.appendChild(kBand(o.band));
   } else if(o.range){
-    const r=kRange(o.range); if(r) c.appendChild(r);
+    const r=kRange(o.range); if(r) mb.appendChild(r);
   } else if(o.day){
-    c.appendChild(kDay(o.day));
+    mb.appendChild(kDay(o.day));
   } else if(o.units){
-    c.appendChild(kUnits(o.units));
+    mb.appendChild(kUnits(o.units));
   } else if(o.mini){
-    const m=kMini(o.mini); if(m) c.appendChild(m);
-  } else if(o.spark){
-    c.appendChild(sparkline(o.spark.vals,o.spark.cur,o.spark.ref));
+    const m=kMini(o.mini); if(m) mb.appendChild(m);
   } else if(o.meter!=null&&isFinite(o.meter)){
     /* the reference is drawn, not implied: a meter with no reference is a
        claim about a denominator nobody stated */
     const mk=[el("i",{style:"width:"+clamp(o.meter,0,100)+"%"})];
     if(o.meterRef!=null&&isFinite(o.meterRef))
       mk.push(el("u",{style:"left:"+clamp(o.meterRef,0,100)+"%"}));
-    c.appendChild(el("div",{class:"km "+(o.meterK||"")},mk));
-    if(o.meterAx) c.appendChild(el("div",{class:"km-ax"},
+    mb.appendChild(el("div",{class:"km "+(o.meterK||"")},mk));
+    if(o.meterAx) mb.appendChild(el("div",{class:"km-ax"},
       o.meterAx.map(t=>el("span",{html:t}))));
   }
   /* secondary marks — a frequency across days, or the declared list itself,
      can sit under any primary mark */
-  /* one card genuinely needs two marks: Active Time % is a slice of a whole
-     AND its own note says the sparkline tells a one-day dip from a pattern.
-     The chain picked tri and dropped the spark without a trace. */
-  if(o.spark&&o.tri) c.appendChild(sparkline(o.spark.vals,o.spark.cur,o.spark.ref));
-  if(o.days) c.appendChild(kDays(o.days));
-  if(o.tags){const t=kTags(o.tags); if(t) c.appendChild(t);}
+  if(o.days) mb.appendChild(kDays(o.days));
+  if(o.tags){const t=kTags(o.tags); if(t) mb.appendChild(t);}
+
+  if(mb.childNodes.length) c.appendChild(mb);
 
   const f=el("div",{class:"kc-f"});
   if(o.chip) f.appendChild(el("span",{class:"kc-chip t-"+(o.chip.tone||"n"),
@@ -3745,7 +3717,8 @@ function mapPanel(){
 /* ---- the outcome funnel ---- */
 function funnelPanel(){
   const a=scopeAgg(), rows=funnelOf(a), top=rows[0].v||1;
-  const cols=[CSSV("--s1"),CSSV("--s3"),CSSV("--s3"),CSSV("--s4"),CSSV("--s2"),CSSV("--s7")];
+  /* no palette: each stage is coloured by the share it survives with, the
+     same scoring its own percentage already prints */
   const p=el("div",{class:"panel"});
   p.appendChild(el("div",{class:"panel-h"},[
     el("b",{text:"Verification Funnel"}),
@@ -3753,7 +3726,7 @@ function funnelPanel(){
   const box=el("div",{class:"fun"});
   rows.forEach((r,i)=>{
     const share=r.v/top*100, drop=i?(rows[i-1].v-r.v)/(rows[i-1].v||1)*100:0;
-    const c=cols[i];
+    const c=i?ryg(share,100):CSSV("--ink-2");
     const row=el("div",{class:"fun-r",style:"border-left-color:"+c},[
       el("div",{class:"fun-fill",style:"width:"+clamp(share,2,100)+"%;background:"+c}),
       el("div",{class:"fun-t"},[
@@ -3983,14 +3956,14 @@ function pageCentreOverview(){
   v.appendChild(kg(4,[
     kcard({lbl:"Avg Attendance",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:orDash(R.avgAtt,x=>fmt(x,1)),
       unit:"learners",delta:Rp&&R.avgAtt!=null&&Rp.avgAtt!=null?{v:R.avgAtt-Rp.avgAtt}:null,
-      spark:{vals:rollSeries("avgAtt"),cur:dayIdx()},
-      foot:"Mean of per-space averages",
+      mini:{vals:rollSeries("avgAtt"),labs:FEED_DATES.map(x=>DAYSHORT[x]),cur:dayIdx()},
+      foot:"Mean of per-space averages · four days of feed",
       note:"Mean of each classroom's own in-session average. Never a sum — no doorway camera exists to de-duplicate a person seen in two rooms."}),
     kcard({lbl:"Peak Occupancy",cam:{space:R.peakCam||busiestRoom(),signal:"headcount"},src:"measured",val:fmt(R.peak,1),
       unit:R.peakCam?SP[R.peakCam].short:"",
       delta:Rp?{v:R.peak-Rp.peak}:null,
-      spark:{vals:rollSeries("peak"),cur:dayIdx()},
-      foot:"Busiest 2-minute mean",
+      mini:{vals:rollSeries("peak"),labs:FEED_DATES.map(x=>DAYSHORT[x]),cur:dayIdx()},
+      foot:"Busiest 2-minute mean · four days of feed",
       note:"Highest 2-minute mean any single classroom reached. The export is already a per-minute mean over sampled frames, so this is a floor on the true instantaneous peak."}),
     kcard({lbl:"Active Classrooms",cam:{space:darkCam(),signal:"headcount"},src:"measured",val:R.running,unit:"of "+R.rooms,
       tone:rygTone(R.running,R.rooms),
@@ -4090,10 +4063,10 @@ function pageCentreOverview(){
   v.appendChild(sec("Enrollment & Capacity — Per Course"));
   v.appendChild(cgrid(2,[
     cx("Enrolment Against Sanctioned Capacity",
-      [{k:"Enrolled",c:SER[0]},{k:"Sanctioned",c:CSSV("--q2")}],
+      [{k:"Enrolled",c:C_OBS},{k:"Sanctioned",c:C_DECL}],
       W=>columns({W,cats:cs.map(c=>c.code),
-        series:[{k:"Enrolled",c:SER[0],v:cs.map(c=>c.enrolled)},
-                {k:"Sanctioned",c:CSSV("--q2"),v:cs.map(c=>c.sanctioned)}],h:208}),
+        series:[{k:"Enrolled",c:C_OBS,v:cs.map(c=>c.enrolled)},
+                {k:"Sanctioned",c:C_DECL,v:cs.map(c=>c.sanctioned)}],h:208}),
       ()=>mkTable(["Course","Enrolled","Sanctioned","Vacant","Utilisation"],
         cs.map(c=>[c.name,String(c.enrolled),String(c.sanctioned),
           String(c.sanctioned-c.enrolled),pc(c.enrolled/c.sanctioned*100)])),
@@ -4179,16 +4152,16 @@ function pageAttendance(){
                                 :{t:"all present",tone:"ok"},
       note:"A cohort is more than "+COHORT_THR+" people held together in one space. The camera does not know the course name — only that a group persisted."}),
     kcard({lbl:"Avg Cohort Duration",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:avgDur==null?"—":fmt(avgDur,1),unit:"h",
-      spark:{vals:FEED_DATES.map(x=>{const rs=roomsIn().filter(r=>D[x][r]&&D[x][r].running);
-        return rs.length?avg(rs.map(r=>D[x][r].presentMin))/60:0;}),cur:dayIdx()},
+      mini:{vals:FEED_DATES.map(x=>{const rs=roomsIn().filter(r=>D[x][r]&&D[x][r].running);
+        return rs.length?avg(rs.map(r=>D[x][r].presentMin))/60:null;}),labs:FEED_DATES.map(x=>DAYSHORT[x]),cur:dayIdx()},
       foot:"continuous presence, lunch removed"}),
     kcard({lbl:"Avg Cohort Headcount",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",
       val:live.length?fmt(avg(live.map(r=>D[d][r].avgIn)),1):"—",unit:"learners",
-      spark:{vals:rollSeries("avgAtt"),cur:dayIdx()},
+      mini:{vals:rollSeries("avgAtt"),labs:FEED_DATES.map(x=>DAYSHORT[x]),cur:dayIdx()},
       foot:"while the cohort is in the room"}),
     kcard({lbl:"Peak Headcount Trend",cam:{space:busiestRoom(),signal:"headcount"},src:"measured",val:fmt(roll(d,S.centre||null).peak,1),
       delta:P?{v:roll(d,S.centre||null).peak-roll(P,S.centre||null).peak}:null,
-      spark:{vals:rollSeries("peak"),cur:dayIdx()},
+      mini:{vals:rollSeries("peak"),labs:FEED_DATES.map(x=>DAYSHORT[x]),cur:dayIdx()},
       foot:"day on day"}),
   ]));
 
@@ -4208,19 +4181,20 @@ function pageAttendance(){
     kcard({lbl:"Active Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pAct),tone:rygTone(pAct,75),
       tri:ZTRI,triHi:0,triAx:true,
-      spark:{vals:actByDay,cur:FEED_DATES.indexOf(d),ref:75},
+      days:{on:actByDay.map(x=>x<75),cur:FEED_DATES.indexOf(d),
+        lbl:"days under the 75% reference"},
       chip:lowDays>=3?{t:"low on "+lowDays+" of "+FEED_DATES.length+" days — pattern, act",tone:"crit"}
           :(pAct<40?{t:"single-day dip — watch, don't act",tone:"warn"}
                    :{t:hrs(zAct)+"h of "+hrs(zDay)+"h",tone:rygTone(pAct,75)}),
-      note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the sparkline shows which it is."}),
+      note:"Share of the day a room had a cohort AND an instructor present together. One low day can be a sick day — not actionable. A repeated pattern across days is a red flag, and the four day marks show which it is."}),
     kcard({lbl:"Unsupervised Time %",src:"modelled",cam:{space:busiestRoom(),signal:"instructor"},
       val:pc(pUns),tone:pUns>10?"crit":pUns>5?"warn":"good",
-      tri:ZTRI,triHi:1,
+      tri:ZTRI,triHi:1,triAx:true,
       chip:pUns>0?{t:"learning that should be happening",tone:"warn"}:{t:"none observed",tone:"ok"},
       note:"Share of the day a room had a cohort present but no instructor."}),
     kcard({lbl:"Idle Time %",src:"modelled",cam:{space:busiestRoom(),signal:"headcount"},
       val:pc(pIdl),tone:pIdl>40?"crit":pIdl>25?"warn":"good",
-      tri:ZTRI,triHi:2,
+      tri:ZTRI,triHi:2,triAx:true,
       foot:"nobody in the room at all"}),
     kcard({lbl:"Instructor Presence Timeline",src:"modelled",
       cam:{space:busiestRoom(),signal:"instructor"},
@@ -4274,18 +4248,18 @@ function pageAttendance(){
 
   v.appendChild(cgrid(2,[
     cx("Enrolment, Biometric and Camera Compared",
-      [{k:"Enrolled",c:CSSV("--q2")},{k:"Biometric",c:SER[6]},{k:"Camera",c:SER[0]}],
+      [{k:"Enrolled",c:C_DECL},{k:"Biometric",c:C_BIO},{k:"Camera",c:C_OBS}],
       W=>columns({W,cats:cs.map(c=>c.code),series:[
-        {k:"Enrolled",c:CSSV("--q2"),v:enr},
-        {k:"Biometric",c:SER[6],v:aeb},
-        {k:"Camera",c:SER[0],v:cam}],h:236,fmtV:x=>fmt(x,1)}),
+        {k:"Enrolled",c:C_DECL,v:enr},
+        {k:"Biometric",c:C_BIO,v:aeb},
+        {k:"Camera",c:C_OBS,v:cam}],h:236,fmtV:x=>fmt(x,1)}),
       ()=>mkTable(["Course","Enrolled","Biometric","Camera peak","Biometric − camera"],
         cs.map((c,i)=>[c.name,String(enr[i]),String(aeb[i]),fmt(cam[i],1),ppl(gap[i])])),
       "The register, the face-authentication device and the camera, side by side. Where the third falls far below the second, the session needs an explanation."),
     cx("Biometric Claim Less Camera Observation",null,
       W=>bars({W,cats:cs.map(c=>SP[c.space].short),v:gap,
         fmtV:x=>(x>0?"+":"")+ppl(x),vlabel:"Gap",max:Math.max(...gap,4),minH:236,
-        statusOf:x=>x>=6?ST.critical:x>=3?ST.warning:SER[0],
+        statusOf:x=>x>=6?ST.critical:x>=3?ST.warning:ST.good,
         threshold:3,thresholdLabel:"review over"}),
       ()=>mkTable(["Room","Biometric","Camera peak","Gap"],
         cs.map((c,i)=>[SP[c.space].name,String(aeb[i]),fmt(cam[i],1),ppl(gap[i])])),
@@ -4301,7 +4275,7 @@ function pageAttendance(){
       tone:rygTone(m.activeMin/tot*100,60),
       tri:[{k:"Active",v:m.activeMin,c:CSSV("--good")},
            {k:"Unsupervised",v:m.unsupMin,c:CSSV("--warning")},
-           {k:"Idle",v:m.idleMin,c:CSSV("--q2")}],
+           {k:"Idle",v:m.idleMin,c:CSSV("--rule")}],
       chip:m.unsupMin>30?{t:hrs(m.unsupMin)+"h unsupervised",tone:"warn"}:null,
       foot:hrs(m.idleMin)+"h idle",
       note:"Active = cohort and instructor together. Unsupervised = cohort present, no instructor. Idle = nobody in the room."});
@@ -4322,9 +4296,9 @@ function pageAttendance(){
           return rr&&rr.running?fmt(rr.avgIn,1):"—";})])),
       "Mean in-session attendance. Hatched means the camera was up and no cohort ever formed."),
     cx("Peak Occupancy Trend",
-      live.slice(0,3).map((r,i)=>({k:SP[r].short,c:SER[i]})),
+      live.slice(0,3).map((r,i)=>({k:SP[r].short,c:INK3[i]})),
       W=>lines({W,xs:FEED_DATES.map(x=>DAYLBL[x]),
-        series:live.slice(0,3).map((r,i)=>({k:SP[r].short,c:SER[i],
+        series:live.slice(0,3).map((r,i)=>({k:SP[r].short,c:INK3[i],
           v:FEED_DATES.map(x=>D[x][r]?D[x][r].peak:null)})),h:236,fmtV:x=>fmt(x,1)}),
       ()=>mkTable(["Room",...FEED_DATES.map(x=>DAYLBL[x])],
         rooms.map(r=>[SP[r].short,...FEED_DATES.map(x=>D[x][r]?fmt(D[x][r].peak,1):"—")])),
@@ -4353,7 +4327,7 @@ function pageAttendance(){
     v.appendChild(sec(SP[cur].name+(cc?" · "+cc.name:""),"selected space"));
     v.appendChild(cgrid(2,[
       cx("Headcount Across the Instructional Day",null,
-        W=>lines({W,xs:cv.lab,series:[{k:"Headcount",c:SER[0],v:cv.v}],
+        W=>lines({W,xs:cv.lab,series:[{k:"Headcount",c:C_OBS,v:cv.v}],
           area:true,markers:false,h:250,xEvery:10,fmtV:x=>fmt(x,1),
           bands:[{from:cv.idxOf(LUNCH[0]),to:cv.idxOf(LUNCH[1]),fill:"#f6f1e6",label:"Lunch"}]}),
         ()=>mkTable(["Time","Headcount"],cv.lab.map((t,i)=>
@@ -4376,7 +4350,10 @@ function pageAttendance(){
     ]));
     v.appendChild(kg(4,[
       kcard({lbl:"Peak, Selected Day",src:"measured",val:fmt(rr.peak,1),
-        spark:{vals:cv.v,cur:rr.peakMin!=null?cv.idxOf(rr.peakMin):null},
+        mini:(()=>{const hb=hourBand(cur,d);
+          if(!hb.length) return null;
+          const pk=hb.reduce((b,x,i,a)=>(x.pk||0)>(a[b].pk||0)?i:b,0);
+          return {vals:hb.map(b=>b.pk),labs:hb.map((b,i)=>i%3?"":b.h.slice(0,2)),hi:pk};})(),
         chip:(rr.avgIn&&rr.peak/rr.avgIn>1.8)
           ?{t:"peak "+fmt(rr.peak/rr.avgIn,1)+"× the mean",tone:"warn"}:null,
         foot:rr.peakMin!=null?"at "+hm(rr.peakMin):"",
@@ -4576,10 +4553,10 @@ function pageAssessment(){
 
   AL.push(cgrid(1,[
     cx("Observed Present Against Eligible Candidates",
-      [{k:"Eligible",c:CSSV("--q2")},{k:"Present",c:SER[0]}],
+      [{k:"Eligible",c:C_DECL},{k:"Present",c:C_OBS}],
       W=>columns({W,cats:A.map(a=>a.code),series:[
-        {k:"Eligible",c:CSSV("--q2"),v:A.map(a=>a.candidates)},
-        {k:"Present",c:SER[0],v:A.map(a=>a.present)}],h:208}),
+        {k:"Eligible",c:C_DECL,v:A.map(a=>a.candidates)},
+        {k:"Present",c:C_OBS,v:A.map(a=>a.present)}],h:208}),
       ()=>mkTable(["Course","Eligible","Present","Rate"],
         A.map(a=>[a.name,String(a.candidates),String(a.present),
           pc(a.present/a.candidates*100)])),
@@ -4737,7 +4714,7 @@ function pageCoverage(){
     const w=r.cov, left=clamp(w[0]/1440*100,0,100),
           wide=clamp((w[1]-w[0])/1440*100,0.6,100-left);
     const bar=el("span",{class:"tk span24"},[
-      el("i",{style:`left:${left}%;width:${wide}%;background:${r.gapsMin?ST.warning:SER[0]}`})]);
+      el("i",{style:`left:${left}%;width:${wide}%;background:${r.gapsMin?ST.warning:ST.good}`})]);
     hoverable(bar,`<div class="hd">${SP[c].name}</div>Feed ${hm(w[0])}–${hm(w[1])}`+
       (r.gapsMin?`<br>${fmt(r.gapsMin)} min dropped inside the window`:""));
     cv.appendChild(el("li",{},[el("span",{class:"nm",text:camLabel(c)+" · "+SP[c].short}),
@@ -4764,9 +4741,9 @@ function pageCoverage(){
     const cur=cRooms.map(c=>curveOf(c,d,7*60,19*60,10));
     v.appendChild(cgrid(1,[
       cx("Movement Index Across the Day",
-        cRooms.map((c,i)=>({k:SP[c].short,c:SER[i]})),
+        cRooms.map((c,i)=>({k:SP[c].short,c:INK3[i]})),
         W=>lines({W,xs:cur[0]?cur[0].lab:[],
-          series:cRooms.map((c,i)=>({k:SP[c].short,c:SER[i],v:cur[i]?cur[i].v:[]})),
+          series:cRooms.map((c,i)=>({k:SP[c].short,c:INK3[i],v:cur[i]?cur[i].v:[]})),
           h:240,markers:false,fmtV:x=>fmt(x,1),xEvery:12}),
         ()=>mkTable(["Time",...cRooms.map(c=>SP[c].short)],
           (cur[0]?cur[0].lab:[]).map((t,i)=>[t,...cur.map(cc=>
@@ -4878,7 +4855,13 @@ function buildDeck(host){
     const sec=el("section",{class:"slide",role:"group",
       "aria-label":"Slide "+(i+1)+" of "+slides.length});
     sl.groups.forEach(g=>g.nodes.forEach(n=>sec.appendChild(n)));
-    if(!sec.querySelector(".geo,.duo,.cg,.panel")) sec.classList.add("centered");
+    if(!sec.querySelector(".geo,.duo,.cg,.panel")){
+      sec.classList.add("centered");
+      /* re-parent into one wrapper per group; the nodes move, so the loose
+         copies appended above are gone by the end of this loop */
+      sl.groups.forEach(g=>{const w=el("div",{class:"grp"});
+        g.nodes.forEach(n=>w.appendChild(n)); sec.appendChild(w);});
+    }
     track.appendChild(sec);
   });
   deck.appendChild(track);

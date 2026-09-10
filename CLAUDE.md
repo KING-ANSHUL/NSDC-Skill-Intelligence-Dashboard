@@ -254,6 +254,84 @@ to the live `.grid`/`.cell` system.
    deleting neighbours is a second way to re-create the same defect. Diff old-vs-new selector sets and
    re-test the toggle explicitly.
 
+## One colour language, and the white bands (2026-09-10)
+
+Anshul pointed at three cards and said the four-day dot strip should go, that there is too much white
+space, and that **every visual should be red / amber / green only, because a fourth hue competes with
+the judgement and breaks the chain of thought.** All three turned out to be the same problem seen from
+three angles: marks that were decoration rather than evidence.
+
+### The dot strip is gone
+
+A four-point strip drawn in hairline grey inside an 18px band, with no axis and no day labels, reads as
+a stray scribble in the middle of a card, not as a chart. The same four readings are now **four labelled
+bars** (`Wed Thu Fri Sat`, selected day in ink) — they say which day is which, they leave no floating
+line, and they fill the void the strip sat in. `sparkline()` had no callers left and was deleted with it.
+
+- Active Time % kept the information, not the mark: its note promised something that told a one-day dip
+  from a pattern, and **four day marks scored against the 75% reference** say it in 11px. It is the only
+  one of these that *has* a reference, which is why it is the only one coloured.
+- "Peak, Selected Day" had the one non-dot spark (an intra-day area). It now draws the **hour bands** it
+  was sketching, on the same 07–19 axis as the chart beside it.
+- `kMini` grew up for this: nulls render hatched (never a zero-height bar), an optional `ref` draws a
+  dashed rule, `cur` emphasises the selected reading, and `colorOf` is opt-in.
+
+### Colouring a reading with nothing to score it against is a lie
+
+**A bar gets a hue only where a reference exists.** Avg Attendance has no declared reference, so its four
+day bars are grey with the selected day in ink — painting them red and green would assert a judgement
+the data cannot support. Active Time % has 75%, so it is scored. This is the rule, not a preference.
+
+### The palette, stated once
+
+There are exactly two channels on screen now:
+
+| channel | used for | colours |
+|---|---|---|
+| **judgement** | anything scored against a reference | red → amber → green (`RYG`, `--good/--warning/--critical`) |
+| **neutral** | reference, category, magnitude with no reference | `C_DECL` (`--rule`) → `C_BIO` (`--muted`) → `C_OBS` (`--ink-2`), and `INK3` for categories |
+
+Declared/committed/eligible is always the **palest** — it is a reference, not a series. Observed is the
+darkest. Three rooms on a trend get three steps of one grey (`INK3`), never three hues: **a hue on a
+category invites the reader to score it.** Converted: card meters, unit glyphs, day rails, ranges, mini
+bars, the camera-button dot, the per-room Idle slice (which was blue while the centre-wide version of
+the same bar was grey, three slides apart), the two- and three-series column charts, the room and
+corridor line charts, the availability bars, sub-zero gap bars (camera above biometric is not a failure,
+so it is grey, not another hue), and the Verification Funnel — which had been running **six arbitrary
+hues for six stages of one quantity** while its own text already printed each stage's survival share in
+RYG. The bar now says what the number says.
+
+**Verified by census, not by eye:** every saturated colour painted across both scopes and all five tabs
+is red, amber or green — with three exceptions, all of them the provenance system: `#2a78d6` (measured),
+`#4a3aa7` (biometric) and `--accent` on chrome. **Those are deliberately left.** They say where a number
+came from, not whether it is good; they are shape-coded as well as coloured; and provenance is the
+product. Turning them into greys is a live option but it is Anshul's call, not a tidy-up.
+
+### The white bands
+
+Two separate holes, both fixed:
+
+- **Inside a card.** `.kc-f{margin-top:auto}` pinned the footnote to the bottom and dumped every pixel of
+  slack into one hole between the mark and the footnote — 42 to 68px on the cards Anshul pointed at. All
+  marks now live in `.kc-m`, which takes the slack and centres them in it. Hole measured after: 0px on
+  every card.
+- **Between sections.** A centred slide spread its slack with `space-evenly` over a **flat** list, so the
+  gap between a heading and the cards it labels was the same 56px as the gap between one group and the
+  next — 270px of white on one slide, every heading floating unattached to its own row. `buildDeck()` now
+  wraps each group in `.grp` **on centred slides only** (a slide holding `.geo`/`.duo`/`.cg`/`.panel` has
+  direct-child fill rules a wrapper would break). Heading-to-row is 7px, group-to-group 60px, and groups
+  grow into the remaining slack up to a **205px cap**. The cap matters: fully stretched, three groups put
+  259px cards on screen with their marks floating and *no* separation between sections — worse than the
+  bands. Capped: 180px cards, and the slide fills to within 76px of the fold.
+
+### Measuring when the browser pane is hidden
+
+The 500ms settle this file's sweep has always used exists only because the entrance animation inflates
+`scrollHeight`. A hidden pane throttles `setTimeout`, so that sweep now times out before it finishes.
+**Inject `*{animation:none!important;transition:none!important}` and measure synchronously instead** —
+150 slide-states then run in one call with no timers at all, and the numbers are exact rather than
+"probably settled". This supersedes the wait-500ms advice whenever you can control the page.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

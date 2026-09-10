@@ -407,6 +407,50 @@ whole second component set reachable only from dead code) and now `.evt` were al
 none of them threw an error, logged anything, or failed a layout assertion. **An unstyled component
 does not fail loudly — it renders, and it is wrong.**
 
+## Dark mode, and what a theme is allowed to move (2026-09-10)
+
+Anshul asked for a dark-mode button. Worth naming the tension first: CLAUDE.md said "no dark-mode flip
+of the whole dashboard — the light paper plane is the institutional register, the dark plane is
+reserved for video". He overrode that, so it is built. The compromise that keeps the camera drawer
+meaningful: **the drawer does not follow the theme.** Its darkness is evidence, not preference, and in
+dark mode it stays the one surface that is darker still than the page.
+
+**Only the neutral plane moves.** Red, amber and green keep their meaning and are lifted just enough
+to hold contrast on a dark ground. A judgement that changes hue between themes is not a judgement.
+
+**The palette was read once, at load.** `SER`, `SEQ`, `ST`, `SURFACE`, `RYG`, `C_DECL`/`C_BIO`/`C_OBS`
+and `INK3` are all captured with `CSSV()` while the module evaluates. Flipping a token repaints the CSS
+and leaves **every bar, line, heat cell and funnel row on the old theme's colours**. They are `let` now
+and `refreshPalette()` re-reads them; the toggle calls it before `render()`. And the saved theme is
+applied in a three-line block at the very top of the `<script>`, *before* those captures run — restore
+it any later and a reload in dark mode paints dark CSS with light chart colours.
+
+**A fill ramp is not a text ramp.** Six places painted a percentage in the RYG *fill* colour, and
+amber-on-paper is 2.58:1 — a figure an officer is meant to read from six metres. There is a parallel
+ink ramp now, `--rygi0..5` (and `rygInk()` / `refInk()` / `SC.ink()`), same six steps, tuned for type.
+This was failing in the light theme too; the dark audit is what surfaced it.
+
+**Anything that inverts to `--accent` or `--ink` cannot use white text.** Both tokens get *lighter* in
+dark mode, so `color:#fff` on a pressed ghost button landed at 2.19:1 and on a selected map pill at
+1.17:1. Inverted controls use `var(--paper)` — the page colour, whichever page that is.
+
+**A scored heat cell picked its ink from the wrong thing.** It printed `#fff` on every coloured cell,
+including the amber and mid-green steps where white is 2.1:1. `inkOn(bg)` now computes the cell's
+luminance and returns dark or white. Also a light-theme bug the dark audit found.
+
+Nine hard-coded light hexes in the chart code (the "no reading" cross-hatch, the lunch band, the map's
+dim/zoom/null state fills and its edge stroke) are tokens now, because a stylesheet override cannot
+reach a colour baked into a JS string.
+
+**Verified by audit, not by eye, in both themes:** every text node in `main`, the masthead and the
+tabrow measured against its own computed background across 3 scopes × 2 days × 5 tabs × every slide —
+**zero pairs below 3:1 in either theme**, plus the camera drawer opened and checked separately. The
+same sweep reports zero NaN, zero page scroll, zero overflowing slides and zero masthead clipping in
+both themes.
+
+**When adding a component, it now has to survive two themes.** Re-run the contrast audit rather than
+looking at it; three of the six failures above were invisible to me until it was measured.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

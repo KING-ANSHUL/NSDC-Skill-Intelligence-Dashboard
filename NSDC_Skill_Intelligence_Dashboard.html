@@ -41,9 +41,25 @@
 
   /* status — reserved, never used as a series */
   --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
-  --good-ink:#006300;
+  --good-ink:#006300; --warn-ink:#8a5a00;
 
-  /* dark video plane */
+  /* status tints — the pale wash behind a chip, a delta or a meter track.
+     Tokens because a theme has to be able to move them; they were nine
+     hard-coded hexes scattered across the sheet. */
+  --tint-good:#e6f4ea;  --tint-good-ink:#0a6b36;
+  --tint-warn:#fdf3dd;  --tint-warn-ink:#7a5200;
+  --tint-crit:#fbe9e7;  --tint-crit-ink:#8f2020;
+  --track-good:#eaf7ea; --track-warn:#fdf6e6; --track-crit:#fbeeee;
+  --modelled-rail:#efdcae;
+  --band-warm:#f6f1e6;      /* the lunch band under a day curve */
+  --stage-1:#f7fafc; --stage-2:#eef3f8;   /* the map's own plane */
+  --geo-dim:#e7edf3; --geo-zoom:#e9eff5; --geo-null:#dfe6ec;
+  --geo-edge:#ffffff;
+  --hatch-1:#f2f4f7; --hatch-2:#e8ecf1;   /* "no reading" cross-hatch */
+  --chip-plane:rgba(255,255,255,.93);     /* the chips sitting on the map */
+
+  /* dark video plane — the camera stays dark in BOTH themes: it is the one
+     surface whose darkness carries meaning rather than preference */
   --vid:#0a0f16; --vid-2:#111b26; --vid-ink:#dfe8f2; --vid-muted:#7e94aa;
 
   --font:"Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
@@ -166,7 +182,7 @@ svg.viz [tabindex]:focus-visible{outline:2px solid var(--ink);outline-offset:2px
   border:1px solid var(--rule);border-radius:2px;padding:5px 11px;cursor:pointer;
 }
 .ghost:hover{background:var(--accent-soft);border-color:var(--accent)}
-.ghost[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ghost[aria-pressed="true"]{background:var(--accent);color:var(--paper);border-color:var(--accent)}
 
 /* ---------- tabs ---------- */
 .tabrow{display:flex;align-items:center;gap:18px;background:var(--surface);
@@ -374,8 +390,52 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 :root{
   /* red -> green scoring ramp: the single fastest way to say good/bad */
   --ryg0:#c0392b;--ryg1:#dd6a35;--ryg2:#c9971f;--ryg3:#6aa96a;--ryg4:#3f9455;--ryg5:#0f7a45;
+  /* the same six steps as text: >=4.5:1 on --surface, where the fills are not */
+  --rygi0:#a52a1e;--rygi1:#9c4413;--rygi2:#7a5200;--rygi3:#2f7440;--rygi4:#256b3d;--rygi5:#0f5f36;
   --card:0 1px 2px rgba(14,23,32,.05),0 2px 10px rgba(14,23,32,.04);
 }
+
+html[data-theme="dark"]{
+  color-scheme: dark;
+
+  --paper:#0d141c;
+  --surface:#141d27;
+  --surface-2:#1a2430;
+  --ink:#e8eef5;
+  --ink-2:#a9bccd;
+  --muted:#8b9dad;          /* 5.6:1 on --surface */
+  --hair:#243141;
+  --rule:#33455a;
+  --ring:rgba(0,0,0,.45);
+
+  --accent:#78b4f0;         /* lifted: #175a9e is 2.1:1 on this plane */
+  --accent-soft:#1b2c3e;
+
+  /* status keeps its meaning; only the lightness moves */
+  --good:#3fbf5a; --warning:#e5a83a; --serious:#ea8a5f; --critical:#e05a55;
+  --good-ink:#5fd07a; --warn-ink:#e8b552;
+
+  --ryg0:#e05a55;--ryg1:#e08247;--ryg2:#d8ad3c;--ryg3:#6cae72;--ryg4:#49b268;--ryg5:#33a86a;
+  --rygi0:#ff8f8a;--rygi1:#f0a074;--rygi2:#e8c163;--rygi3:#7fd08f;--rygi4:#5fcb84;--rygi5:#4ac489;
+
+  --tint-good:#16301f;  --tint-good-ink:#7fd898;
+  --tint-warn:#33270f;  --tint-warn-ink:#ecc36a;
+  --tint-crit:#361a1a;  --tint-crit-ink:#f09a95;
+  --track-good:#14291b; --track-warn:#2c2211; --track-crit:#2e1818;
+  --modelled-rail:#6d5a2a;
+  --band-warm:#26200f;
+  --stage-1:#111a24; --stage-2:#0d151d;
+  --geo-dim:#1a2430; --geo-zoom:#22303f; --geo-null:#182129;
+  --geo-edge:#0d141c;
+  --hatch-1:#1a2430; --hatch-2:#243141;
+  --chip-plane:rgba(13,20,28,.90);
+
+  --card:0 1px 2px rgba(0,0,0,.40),0 2px 10px rgba(0,0,0,.30);
+}
+/* the drawer sits on its own plane in both themes, but on a dark page it has
+   to stay distinguishable FROM the page rather than blend into it */
+html[data-theme="dark"] .camdrawer{border-color:#2b3d52}
+html[data-theme="dark"] .cd-h{background:linear-gradient(180deg,#1b2f46,#12202c)}
 
 /* ---- section rule: a word and a hairline, never a card header ---- */
 .sec{display:flex;align-items:center;gap:11px;margin:0 0 6px;flex:none}
@@ -414,14 +474,14 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal}
 .kc-d{margin-left:auto;flex:none;gap:3px;
   font-variant-numeric:tabular-nums;letter-spacing:.01em}
-.kc-d.up{color:#0a6b36;background:#e6f4ea}
-.kc-d.dn{color:#8f2020;background:#fbe9e7}
+.kc-d.up{color:var(--tint-good-ink);background:var(--tint-good)}
+.kc-d.dn{color:var(--tint-crit-ink);background:var(--tint-crit)}
 .kc-d.fl{color:var(--ink-2);background:var(--surface-2)}
 
 .kc-v{display:flex;align-items:baseline;gap:5px;margin:3px 0 0;line-height:1}
 .kc-v b{font-size:clamp(23px,2vw,30px);font-weight:680;letter-spacing:-.025em;color:var(--ink)}
 .kc-v i{font-style:normal;font-size:13px;font-weight:620;color:var(--muted)}
-.kc-v.crit b{color:var(--critical)} .kc-v.warn b{color:#8a5a00} .kc-v.good b{color:var(--good-ink)}
+.kc-v.crit b{color:var(--critical)} .kc-v.warn b{color:var(--warn-ink)} .kc-v.good b{color:var(--good-ink)}
 
 /* wraps deliberately: on a six-across KPI row a chip plus the Camera Signals
    button exceed the card width, and a nowrap row cut the button off entirely.
@@ -431,11 +491,11 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .kc-f>*{max-width:100%}
 .kc-chip{gap:5px;letter-spacing:.02em;white-space:nowrap}
 .kc-chip .dt{width:5px;height:5px;border-radius:50%;flex:none}
-.kc-chip.t-ok{color:#0a6b36;background:#e6f4ea}
+.kc-chip.t-ok{color:var(--tint-good-ink);background:var(--tint-good)}
 .kc-chip.t-ok .dt{background:var(--good)}
-.kc-chip.t-warn{color:#7a5200;background:#fdf3dd}
+.kc-chip.t-warn{color:var(--tint-warn-ink);background:var(--tint-warn)}
 .kc-chip.t-warn .dt{background:var(--warning)}
-.kc-chip.t-crit{color:#8f2020;background:#fbe9e7}
+.kc-chip.t-crit{color:var(--tint-crit-ink);background:var(--tint-crit)}
 .kc-chip.t-crit .dt{background:var(--critical)}
 .kc-chip.t-n{color:var(--ink-2);background:var(--surface-2)}
 .kc-chip.t-n .dt{background:var(--muted)}
@@ -538,7 +598,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   padding:4px 9px;border:1px solid var(--rule);background:var(--surface);
   color:var(--ink-2);border-radius:2px;cursor:pointer;white-space:nowrap}
 .pill:hover{background:var(--surface-2)}
-.pill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.pill[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 /* map + rail */
@@ -546,7 +606,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   min-height:0;flex:1}
 @media(max-width:1100px){.geo{grid-template-columns:1fr;grid-auto-rows:auto}}
 
-.mapstage{position:relative;background:linear-gradient(180deg,#f7fafc,#eef3f8);
+.mapstage{position:relative;background:linear-gradient(180deg,var(--stage-1),var(--stage-2));
   border:1px solid var(--hair);border-radius:3px;overflow:hidden;
   flex:1;min-height:0;width:100%}
 .mapstage svg{display:block;width:100%;height:100%}
@@ -558,12 +618,12 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .mp-dot{cursor:pointer}
 .mp-dot:hover circle{stroke:var(--ink);stroke-width:2}
 .mp-badge{position:absolute;left:9px;top:9px;display:flex;align-items:center;gap:6px;
-  background:rgba(255,255,255,.93);border:1px solid var(--rule);border-radius:2px;
+  background:var(--chip-plane);border:1px solid var(--rule);border-radius:2px;
   padding:4px 8px;font-size:10px;font-weight:700;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-2)}
 .mp-badge i{width:6px;height:6px;border-radius:50%;background:var(--good);
   box-shadow:0 0 0 3px rgba(12,163,12,.16)}
-.mp-count{position:absolute;right:9px;top:9px;background:rgba(255,255,255,.93);
+.mp-count{position:absolute;right:9px;top:9px;background:var(--chip-plane);
   border:1px solid var(--rule);border-radius:2px;padding:4px 8px;font-size:10.5px;
   color:var(--ink-2);font-variant-numeric:tabular-nums}
 .mp-back{position:absolute;left:9px;bottom:9px;font-family:inherit;font-weight:640;
@@ -667,7 +727,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   width:17px;height:17px;border-radius:50%;font-size:9.5px;font-weight:700;flex:none;
   background:var(--surface-2);border:1px solid var(--hair);color:var(--muted);
   font-variant-numeric:tabular-nums}
-.st-list button[aria-current="true"] i{background:var(--accent);border-color:var(--accent);color:#fff}
+.st-list button[aria-current="true"] i{background:var(--accent);border-color:var(--accent);color:var(--paper)}
 .st-arrows{display:flex;gap:4px;flex:none;padding-bottom:5px}
 .st-nav{font-family:inherit;display:inline-flex;align-items:center;
   justify-content:center;border:1px solid var(--rule);border-radius:2px;
@@ -902,9 +962,9 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .km{position:relative;height:8px;margin-top:9px;background:var(--surface-2);
   border:1px solid var(--hair);border-radius:2px}
 .km>i{position:absolute;left:0;top:0;bottom:0;background:var(--muted);border-radius:1px 0 0 1px}
-.km.ok{background:#eaf7ea}   .km.ok>i{background:var(--good)}
-.km.warn{background:#fdf6e6} .km.warn>i{background:var(--warning)}
-.km.crit{background:#fbeeee} .km.crit>i{background:var(--critical)}
+.km.ok{background:var(--track-good)}   .km.ok>i{background:var(--good)}
+.km.warn{background:var(--track-warn)} .km.warn>i{background:var(--warning)}
+.km.crit{background:var(--track-crit)} .km.crit>i{background:var(--critical)}
 .km>u{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;
   background:var(--ink);text-decoration:none;border-radius:1px}
 .km-ax{display:flex;justify-content:space-between;gap:8px;margin-top:4px;
@@ -984,7 +1044,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
    screen. A bare "1.1" invites exactly the wrong conclusion. */
 .kband{position:relative;height:22px;margin-top:9px}
 .kband .tk{position:absolute;left:0;right:0;top:6px;height:9px;border-radius:2px;
-  background:linear-gradient(90deg,#eaf7ea 0 60%,#fdf6e6 60% 78%,#fbeeee 78% 100%);
+  background:linear-gradient(90deg,var(--track-good) 0 60%,var(--track-warn) 60% 78%,var(--track-crit) 78% 100%);
   border:1px solid var(--hair)}
 .kband .bl{position:absolute;top:2px;bottom:5px;width:1.5px;background:var(--rule)}
 .kband .vv{position:absolute;top:1px;width:3px;height:19px;margin-left:-1.5px;
@@ -996,7 +1056,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 /* a modelled figure is a promise, not a measurement — so it differs in KIND,
    not only in the hue of its dot: the rail is hatched and so is every fill
    inside it. The dot alone was carrying this distinction on its own. */
-.kc.is-modelled{border-left-color:#efdcae}
+.kc.is-modelled{border-left-color:var(--modelled-rail)}
 .kc.is-modelled::before{content:"";position:absolute;left:-3px;top:-1px;bottom:-1px;
   width:3px;pointer-events:none;
   background:repeating-linear-gradient(180deg,var(--warning) 0 3px,transparent 3px 7px)}
@@ -1034,6 +1094,8 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   <div class="mh-right">
     <button class="ghost" id="btnMeasured" aria-pressed="false">Measured</button>
     <button class="ghost" id="btnTables" aria-pressed="false">Table</button>
+    <button class="ghost" id="btnTheme" aria-pressed="false"
+            title="Switch between the light and dark plane">Dark</button>
     <div class="mh-div"></div>
     <div class="mstat" id="mstat"></div>
   </div>
@@ -1053,6 +1115,8 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 <div id="tip" role="status" aria-live="polite"></div>
 
 <script>
+try{ if(localStorage.getItem("nsdc-theme")==="dark")
+       document.documentElement.setAttribute("data-theme","dark"); }catch(e){}
 "use strict";
 /* ================================================================
    0 · deterministic randomness — a demo must be reproducible
@@ -1746,10 +1810,10 @@ let SYNCS=[];   // per-chart re-layout hooks, refreshed every render
 const NS="http://www.w3.org/2000/svg";
 function sv(t,a){const n=document.createElementNS(NS,t);for(const k in a){if(a[k]!=null)n.setAttribute(k,a[k]);}return n;}
 const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const SER=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"].map(CSSV);
-const SEQ=["--q1","--q2","--q3","--q4","--q5","--q6"].map(CSSV);
-const ST={good:CSSV("--good"),warning:CSSV("--warning"),serious:CSSV("--serious"),critical:CSSV("--critical")};
-const SURFACE=CSSV("--surface");
+let SER=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"].map(CSSV);
+let SEQ=["--q1","--q2","--q3","--q4","--q5","--q6"].map(CSSV);
+let ST={good:CSSV("--good"),warning:CSSV("--warning"),serious:CSSV("--serious"),critical:CSSV("--critical")};
+let SURFACE=CSSV("--surface");
 
 /* Axis ceilings land on a round number so four evenly-spaced ticks carry
    evenly-spaced values. value*1.15 was giving ladders like 0-7-14-22-29. */
@@ -1943,7 +2007,7 @@ function lines(opts){
   const Y=v=>PT+plotH-plotH*(v/max);
   const svg=sv("svg",{class:"viz",viewBox:`0 0 ${W} ${h}`,role:"img"});
   bands.forEach(b=>{
-    svg.appendChild(sv("rect",{x:X(b.from),y:PT,width:Math.max(1,X(b.to)-X(b.from)),height:plotH,fill:b.fill||"#eef2f6"}));
+    svg.appendChild(sv("rect",{x:X(b.from),y:PT,width:Math.max(1,X(b.to)-X(b.from)),height:plotH,fill:b.fill||CSSV("--surface-2")}));
     // band labels are left-anchored at the band start, so a nested band
     // (lunch inside the scheduled session) never collides with its parent
     if(b.label){const t=sv("text",{x:X(b.from)+4,y:PT+11,class:"ax","text-anchor":"start"});t.textContent=b.label;svg.appendChild(t);}
@@ -2060,6 +2124,16 @@ function lines(opts){
 }
 
 
+/* white on an amber cell is 2.1:1. Pick the ink from the fill it sits on,
+   in whichever theme, rather than assuming a coloured cell is a dark one. */
+function inkOn(bg){
+  const m=String(bg).match(/^#([0-9a-f]{6})$/i);
+  if(!m) return CSSV("--ink");
+  const v=parseInt(m[1],16), ch=[(v>>16)&255,(v>>8)&255,v&255].map(x=>{x/=255;
+    return x<=0.03928?x/12.92:Math.pow((x+0.055)/1.055,2.4);});
+  const L=0.2126*ch[0]+0.7152*ch[1]+0.0722*ch[2];
+  return L>0.25?"#10181f":"#ffffff";
+}
 function heat(o){
   const {rows,cols,val,fmtV=v=>fmt(v),rowLab,colLab,unit="",colorOf}=o;
   if(!rows||!rows.length||!cols||!cols.length) return emptyViz(o.emptyNote);
@@ -2074,14 +2148,14 @@ function heat(o){
     cols.forEach((c,ci)=>{
       const v=val[ri][ci];
       if(v==null){
-        const n=el("div",{class:"hm-c",style:"background:repeating-linear-gradient(45deg,#f2f4f7 0 5px,#e8ecf1 5px 10px);color:var(--muted)",text:"—"});
+        const n=el("div",{class:"hm-c",style:"background:repeating-linear-gradient(45deg,"+CSSV("--hatch-1")+" 0 5px,"+CSSV("--hatch-2")+" 5px 10px);color:var(--muted)",text:"—"});
         hoverable(n,`<div class="hd">${rowLab?rowLab(r):r} · ${c}</div>${o.nullNote||"No reading"}`);
         g.appendChild(n);return;
       }
       const t=(v-mn)/((mx-mn)||1);
       const idx=clamp(Math.floor(t*SEQ.length),0,SEQ.length-1);
       const bg=colorOf?colorOf(v,ri):SEQ[idx];
-      const ink=colorOf?"#fff":(idx>=4?"#fff":CSSV("--ink"));
+      const ink=inkOn(bg);
       const n=el("div",{class:"hm-c",style:`background:${bg};color:${ink}`,tabindex:"0",text:fmtV(v)});
       hoverable(n,`<div class="hd">${rowLab?rowLab(r):r} · ${c}</div><div class="r"><i>${o.vlabel||"Value"}</i><span class="v">${fmtV(v)}${unit}</span></div>`);
       g.appendChild(n);
@@ -3280,16 +3354,33 @@ DAYLBL[ALLD]="All days · "+DAYLBL[FEED_DATES[0]].replace(/^\w+ /,"")+
 
 /* red -> green scoring against a reference. Carried over from the first
    NSDC prototype, where it was doing the work three sentences do here. */
-const RYG=["--ryg0","--ryg1","--ryg2","--ryg3","--ryg4","--ryg5"].map(CSSV);
+let RYG=["--ryg0","--ryg1","--ryg2","--ryg3","--ryg4","--ryg5"].map(CSSV);
+/* RYGI is the same scoring, for type instead of area */
+let RYGI=["--rygi0","--rygi1","--rygi2","--rygi3","--rygi4","--rygi5"].map(CSSV);
 /* the neutral channel — see the note above: never a judgement */
-const C_DECL=CSSV("--rule"), C_BIO=CSSV("--muted"), C_OBS=CSSV("--ink-2");
-const INK3=[CSSV("--ink"),CSSV("--ink-2"),CSSV("--muted")];
+let C_DECL=CSSV("--rule"), C_BIO=CSSV("--muted"), C_OBS=CSSV("--ink-2");
+let INK3=[CSSV("--ink"),CSSV("--ink-2"),CSSV("--muted")];
+
+/* every colour the chart layer captured at load, re-read from the sheet */
+function refreshPalette(){
+  SER=["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"].map(CSSV);
+  SEQ=["--q1","--q2","--q3","--q4","--q5","--q6"].map(CSSV);
+  ST={good:CSSV("--good"),warning:CSSV("--warning"),
+      serious:CSSV("--serious"),critical:CSSV("--critical")};
+  SURFACE=CSSV("--surface");
+  RYG=["--ryg0","--ryg1","--ryg2","--ryg3","--ryg4","--ryg5"].map(CSSV);
+  RYGI=["--rygi0","--rygi1","--rygi2","--rygi3","--rygi4","--rygi5"].map(CSSV);
+  C_DECL=CSSV("--rule"); C_BIO=CSSV("--muted"); C_OBS=CSSV("--ink-2");
+  INK3=[CSSV("--ink"),CSSV("--ink-2"),CSSV("--muted")];
+}
 const rygIdx=p=>p<.3?0:p<.5?1:p<.75?2:p<1?3:p<1.35?4:5;
 const rygScore=(v,ref,inv)=>!(ref>0)?1:(inv?(v<=0?2:ref/v):v/ref);
 const ryg=(v,ref,inv)=>RYG[rygIdx(rygScore(v,ref,inv))];
+const rygInk=(v,ref,inv)=>RYGI[rygIdx(rygScore(v,ref,inv))];
 /* strict: anything under the reference is visibly under it */
 const refIdx=p=>p<0.6?0:p<0.78?1:p<1?2:p<1.08?3:p<1.2?4:5;
 const refCol=(v,ref)=>RYG[refIdx(!(ref>0)?1:v/ref)];
+const refInk=(v,ref)=>RYGI[refIdx(!(ref>0)?1:v/ref)];
 const rygTone=(v,ref,inv)=>{const i=rygIdx(rygScore(v,ref,inv));
   return i<=1?"crit":i<=2?"warn":"good";};
 
@@ -3555,6 +3646,7 @@ METRICS.forEach(m=>{
   const span=(hi-lo)||1;
   SCALES[m.k]={lo,hi,ref:m.ref,
     col:v=>RYG[clamp(Math.floor((v-lo)/span*6),0,5)],
+    ink:v=>RYGI[clamp(Math.floor((v-lo)/span*6),0,5)],
     pos:v=>clamp((v-lo)/span*100,0,100)};
 });
 const scale=()=>SCALES[S.metric];
@@ -3619,8 +3711,9 @@ function indiaMap(){
     const a=ST_AGG[code], v=a?metricOf(a):null;
     const dim=zoomSt&&code!==zoomSt;
     const p=sv("path",{d:GEO[code][1],
-      fill:dim?"#e7edf3":(code===zoomSt?"#e9eff5":(v==null?"#dfe6ec":SC.col(v))),
-      stroke:"#ffffff","stroke-width":strokeW,
+      fill:dim?CSSV("--geo-dim"):(code===zoomSt?CSSV("--geo-zoom")
+           :(v==null?CSSV("--geo-null"):SC.col(v))),
+      stroke:CSSV("--geo-edge"),"stroke-width":strokeW,
       class:"mp-st"+(code===zoomSt?" mp-sel":""),
       opacity:dim?".55":"1",
       tabindex:dim?null:"0",role:"button",
@@ -3681,7 +3774,7 @@ function mapRail(){
       el("span",{text:pc(SC.lo)+" lowest state"}),
       el("span",{text:pc(SC.hi)+" highest"})]),
     el("div",{class:"rail-avg"},[
-      el("b",{text:pc(nat),style:"color:"+SC.col(nat)}),
+      el("b",{text:pc(nat),style:"color:"+SC.ink(nat)}),
       el("span",{text:"national · reference "+pc(SC.ref)})])]));
 
   const inState=S.geo.lvl!=="in";
@@ -3759,7 +3852,7 @@ function funnelPanel(){
       el("div",{class:"fun-fill",style:"width:"+clamp(share,2,100)+"%;background:"+c}),
       el("div",{class:"fun-t"},[
         el("b",{text:inr(r.v)}),el("u",{text:r.k}),
-        el("s",{text:pc(share),style:"color:"+(i?ryg(share,100):"var(--ink)")})]),
+        el("s",{text:pc(share),style:"color:"+(i?rygInk(share,100):"var(--ink)")})]),
       el("div",{class:"fun-s"},[srcDot(r.s),document.createTextNode(r.note),
         i?el("span",{class:"fun-d",text:"▼ "+pc(drop)}):null].filter(Boolean))]);
     hoverable(row,'<div class="hd">'+r.k+'</div>'+r.note+
@@ -3829,7 +3922,7 @@ function metricRail(){
       el("u",{text:x.n}),
       el("i",{class:"mr-x",text:"▾"})]));
     card.appendChild(el("div",{class:"mr-v"},[
-      el("b",{text:pc(v),style:"color:"+refCol(v,x.ref)}),
+      el("b",{text:pc(v),style:"color:"+refInk(v,x.ref)}),
       el("s",{text:"ref "+pc(x.ref)})]));
     const bar=el("div",{class:"mr-bar"},[
       el("i",{style:"width:"+clamp(v,0,100)+"%;background:"+refCol(v,x.ref)}),
@@ -3914,7 +4007,7 @@ function metricDetail(mk,onClose){
     list.forEach((r,i)=>{
       const tr=el("tr",{},[
         el("td",{class:"nm",text:r.n}),
-        el("td",{text:pc(r.v),style:"color:"+SC.col(r.v)+";font-weight:700"}),
+        el("td",{text:pc(r.v),style:"color:"+SC.ink(r.v)+";font-weight:700"}),
         el("td",{},[el("span",{class:"sw",style:"background:"+SC.col(r.v)})])]);
       tr.addEventListener("click",r.go);
       tb.appendChild(tr);
@@ -3950,7 +4043,7 @@ function leaderboard(){
       el("td",{class:"nm"},[document.createTextNode(c.name),
         el("em",{text:c.district+" · "+c.stName+" · "+c.code})]),
       el("td",{text:fmt(c.enrolled)}),el("td",{text:fmt(c.sanctioned)}),
-      el("td",{text:pc(c.m.attend),style:"color:"+ryg(c.m.attend,75)+";font-weight:680"}),
+      el("td",{text:pc(c.m.attend),style:"color:"+rygInk(c.m.attend,75)+";font-weight:680"}),
       el("td",{text:pc(c.m.equip)}),el("td",{text:pc(c.m.assess)}),el("td",{text:pc(c.m.cover)}),
       el("td",{},[el("span",{class:"sw",style:"background:"+scale().col(c.m[S.metric])})])]);
     const drill=()=>setScope({lvl:"ctr",st:c.st,ctr:c.id});
@@ -4357,7 +4450,7 @@ function pageAttendance(){
       cx("Headcount Across the Instructional Day",null,
         W=>lines({W,xs:cv.lab,series:[{k:"Headcount",c:C_OBS,v:cv.v}],
           area:true,markers:false,h:250,xEvery:10,fmtV:x=>fmt(x,1),
-          bands:[{from:cv.idxOf(LUNCH[0]),to:cv.idxOf(LUNCH[1]),fill:"#f6f1e6",label:"Lunch"}]}),
+          bands:[{from:cv.idxOf(LUNCH[0]),to:cv.idxOf(LUNCH[1]),fill:CSSV("--band-warm"),label:"Lunch"}]}),
         ()=>mkTable(["Time","Headcount"],cv.lab.map((t,i)=>
           [t,cv.v[i]==null?"—":fmt(cv.v[i],1)]).filter((_,i)=>i%6===0)),
         "Six-minute means straight from the export. Gaps are hatched, never drawn as zero."),
@@ -4831,6 +4924,27 @@ sSel.addEventListener("change",()=>{S.space=sSel.value;S.focusCam=sSel.value;ren
 const btnT=document.getElementById("btnTables");
 btnT.addEventListener("click",()=>{S.tables=!S.tables;
   btnT.setAttribute("aria-pressed",String(S.tables));render();});
+/* Theme. The light plane stays the default and the institutional register —
+   dark is a room-lighting choice, remembered per browser, not a new identity
+   for the product. The palette has to be re-read and the page re-rendered:
+   the CSS follows a token change on its own, the charts do not. */
+const btnTheme=document.getElementById("btnTheme");
+function applyTheme(dark,redraw){
+  document.documentElement.setAttribute("data-theme",dark?"dark":"light");
+  btnTheme.setAttribute("aria-pressed",String(dark));
+  btnTheme.textContent=dark?"Light":"Dark";
+  btnTheme.setAttribute("aria-label",dark?"Switch to the light plane":"Switch to the dark plane");
+  refreshPalette();
+  if(redraw) render();
+}
+btnTheme.addEventListener("click",()=>{
+  const next=document.documentElement.getAttribute("data-theme")!=="dark";
+  try{localStorage.setItem("nsdc-theme",next?"dark":"light");}catch(e){}
+  applyTheme(next,true);
+});
+
+applyTheme(document.documentElement.getAttribute("data-theme")==="dark",false);
+
 const btnM=document.getElementById("btnMeasured");
 btnM.addEventListener("click",()=>{S.measuredOnly=!S.measuredOnly;
   btnM.setAttribute("aria-pressed",String(S.measuredOnly));

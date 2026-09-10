@@ -110,7 +110,7 @@ body{
 .masthead{
   display:flex;align-items:center;gap:10px;
   padding:7px 16px;background:var(--surface);
-  border-bottom:1px solid var(--rule);flex-wrap:nowrap;overflow:hidden;
+  border-bottom:1px solid var(--rule);flex-wrap:wrap;row-gap:6px;
 }
 .mh-lockup{display:flex;align-items:center;gap:14px;text-decoration:none;flex:none}
 .mh-nsdc{height:32px;width:auto;display:block}
@@ -123,16 +123,17 @@ body{
 .mh-title span{font-size:10px;color:var(--muted);white-space:nowrap}
 @media(max-width:1700px){.mh-title span{display:none}}
 .mh-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex:none}
-/* the stat strip repeats what the map panel already prints, so it is what
-   gives way once identity + scope + controls have taken their room */
-@media(max-width:1900px){.mstat>div:nth-child(1),.mstat>div:nth-child(2){display:none}}
-@media(max-width:1600px){.mh-right .mh-div,.mstat{display:none}}
 /* a long centre name must not push the controls off the row */
 .crumb{max-width:24ch;overflow:hidden}
 .crumb span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #fSpace{max-width:190px}
 #fDay{max-width:150px}
 @media(max-width:1240px){.mh-msde,.mh-sep{display:none}}
+@media(max-width:1400px){
+  .masthead .f-cell>label{display:none}
+  .crumb{flex-wrap:nowrap;max-width:26ch}
+  .crumb>*:not(:last-child){display:none}
+}
 .clock{font-size:12px;font-variant-numeric:tabular-nums;color:var(--ink-2)}
 .clock b{font-weight:650;color:var(--ink)}
 
@@ -494,7 +495,13 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   letter-spacing:.1em;font-weight:700;color:var(--muted)}
 .mstat b{display:block;font-size:12.5px;font-weight:680;color:var(--ink);
   font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
-@media(max-width:1240px){.mstat div:nth-child(n+3){display:none}}
+/* the stat strip repeats what the map panel already prints, so it is what
+   gives way once identity + scope + controls have taken their room. These
+   live AFTER the base rules on purpose: a media query carries no extra
+   specificity, and when they sat before `.mstat{display:flex}` they never
+   applied at all. */
+@media(max-width:1900px){.mstat>div:nth-child(1),.mstat>div:nth-child(2){display:none}}
+@media(max-width:1600px){.mh-right .mh-div,.mstat{display:none}}
 
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 .reveal{animation:rise .44s cubic-bezier(.16,.84,.44,1) both}
@@ -752,8 +759,10 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .slide.centered .sec:not(:first-child){margin-top:0}
 /* a heading and the row it labels are one block, and the block is what the
    slide spaces out — proximity, not an even sprinkle */
-.slide.centered>.grp{display:flex;flex-direction:column;flex:1 1 auto;max-height:205px}
-.slide.centered>.grp>.kg{flex:1;min-height:0}
+.slide.centered>.grp{display:flex;flex-direction:column;flex:1 1 0;
+  min-height:min-content}
+.slide.centered>.grp>.kg{flex:1;min-height:min-content}
+.slide.centered .kc{max-height:200px}
 .slide.centered>.grp>.sec{margin-bottom:7px}
 .duo{display:grid;grid-template-columns:var(--duo,minmax(0,1.25fr) minmax(0,1fr));
   gap:16px;align-items:start;margin-bottom:2px}
@@ -851,6 +860,7 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 /* every centre in scope is listed; the panel scrolls, the page does not */
 .lb-scroll{padding:0 6px 4px;overflow-y:auto;min-height:0;flex:1}
 .slide>.panel,.solo>.panel{flex:none}
+.slide>.panel:last-child,.solo>.panel:last-child{flex:1;min-height:0}
 .slide>.panel.grow,.solo>.panel.grow{flex:1;min-height:0}
 .slide>.camdrawer,.slide>.mdrawer,.solo>.camdrawer,.solo>.mdrawer{flex:none}
 .slide>.cx,.solo>.cx{flex:none}

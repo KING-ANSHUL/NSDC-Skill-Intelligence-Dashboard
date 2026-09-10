@@ -332,6 +332,56 @@ The 500ms settle this file's sweep has always used exists only because the entra
 150 slide-states then run in one call with no timers at all, and the numbers are exact rather than
 "probably settled". This supersedes the wait-500ms advice whenever you can control the page.
 
+## Fitting any screen, not one screen (2026-09-10)
+
+Anshul's next note was that the dashboard "does not auto-align to the screen size" — his window is
+~1244 wide, not the 1536 everything had been tuned at. Three separate causes, and the first was the
+worst because it had been invisible for a long time.
+
+**A media query carries no specificity, so a later base rule silently kills it.** The masthead's
+shedding rules sat at line ~128, and `.mstat{display:flex}` is declared ~360 lines later. Same
+specificity, later wins — so `@media(max-width:1600px){.mstat{display:none}}` had **never once
+applied**, and `overflow:hidden` on the masthead hid the evidence. Measured at 1244px: the masthead
+needed 1516px and was clipping 272px of itself. The shed rules now live *after* the base rules they
+override. **When a responsive rule seems not to fire, check source order before you check the query.**
+
+Below that, the masthead needed two more things to give way at ≤1400: the DAY / SPACE micro-labels
+(each select already reads "Wed 05 Aug · partial" — the label restates the value, and hiding a
+`<label>` visually still leaves the select its accessible name) and the breadcrumb's ancestors (the
+Back button beside it already names the level you would go up to). **A breadcrumb narrowed past its
+content does not truncate, it stacks** — the first attempt capped `.crumb` at 16ch and turned it into
+five lines, which made the masthead 125px tall instead of 47. And `.masthead` is `flex-wrap:wrap` now
+rather than `nowrap; overflow:hidden`: if it ever runs out of room again it takes a second line, which
+is ugly and visible, instead of hiding the overflow. `buildDeck` measures the deck's real top, so the
+frame follows it down on its own.
+
+**A fixed px cap is the opposite of adapting to a screen.** The 205px group cap from earlier that day
+starved the gaps to 14px on a short window and left a band under the last section on a tall one. There
+is no fixed height in the centred-slide fill any more:
+
+- every group takes an **equal share** of the frame — `flex:1 1 0`, not `1 1 auto`. With `auto`, a
+  group whose natural content is taller keeps that lead and the leftover air comes out uneven (measured
+  15px under one section and 63px under another);
+- the card grows into its share and stops at **200px**, which is as large as a KPI card gets before its
+  own contents start floating inside it;
+- whatever remains becomes the same amount of air under every section.
+- `min-height:min-content` on the group and its grid is the guard: a group that genuinely needs more
+  than its share keeps its content instead of being squeezed into an overflow.
+
+**A slide whose last block is a plain panel had nothing that could grow.** It is not `centered` (a
+`.panel` is in the exclusion list) and `.slide>.panel` is `flex:none`, so at 1366×768 the Trade
+Concordance slide floated 176px above the fold. The leaderboard had already solved this with an
+explicit `.grow` class; `.slide>.panel:last-child` now gets it without needing to be tagged per call
+site.
+
+**Verified at five viewports** — 1244×845, 1244×965, 1366×768, 1536×1030, 1920×1080 — across 3 scopes ×
+2 days × 5 tabs × every slide: zero overflow, zero masthead clipping, zero masthead wrapping, and no
+slide leaving more than ~16px under its content. At **1100×700** two slides still overflow by 12 and
+18px; that is *pre-existing* (confirmed by running the previous commit at the same size, which
+overflows identically and also clips the masthead by 147px), it is below any presentation size, and it
+was left alone rather than papered over. A widened packer reserve was tried for it, changed nothing,
+and was reverted — **a change that fixes nothing but re-packs every slide is not worth keeping.**
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

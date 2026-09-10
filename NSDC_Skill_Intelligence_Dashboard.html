@@ -145,7 +145,13 @@ body{
 #fSpace{max-width:190px}
 #fDay{max-width:150px}
 @media(max-width:1240px){.mh-msde,.mh-sep{display:none}}
+#btnTheme{gap:5px}
+#btnTheme i{font-style:normal;font-size:12px;line-height:1}
 @media(max-width:1400px){
+  /* five pixels over is still a second row: tighten the column gap before
+     giving up another control */
+  .masthead{column-gap:7px}
+  #btnTheme span{display:none}
   .masthead .f-cell>label{display:none}
   .crumb{flex-wrap:nowrap;max-width:26ch}
   .crumb>*:not(:last-child){display:none}
@@ -738,35 +744,6 @@ html[data-theme="dark"] .cd-h{background:linear-gradient(180deg,#1b2f46,#12202c)
 @media(prefers-reduced-motion:reduce){.deck.anim,.track.anim{transition:none}}
 
 .kc-v.kc-na b{font-size:13px;font-weight:600;color:var(--muted);letter-spacing:0}
-/* ---- the headline rate rail beside the map ---- */
-.mrail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;min-width:0}
-@media(max-width:1240px){.mrail{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:640px){.mrail{grid-template-columns:1fr}}
-.mr{font:inherit;text-align:left;display:flex;flex-direction:column;gap:5px;
-  justify-content:center;overflow:hidden;padding:8px 13px;border:1px solid var(--hair);border-left:3px solid var(--rule);
-  border-radius:3px;background:var(--surface);cursor:pointer;box-shadow:var(--card);
-  transition:border-color .14s,background .14s}
-.mr:hover{background:var(--surface-2);border-left-color:var(--accent)}
-.mr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.mr.on{border-left-color:var(--ink);background:var(--surface)}
-.mr-h{display:flex;align-items:center;gap:7px}
-.mr-h u{text-decoration:none;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;
-  font-weight:700;color:var(--muted);flex:1;min-width:0;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
-.mr-x{font-style:normal;font-size:9px;color:var(--rule);transition:transform .18s}
-.mr[aria-expanded="true"] .mr-x{transform:rotate(180deg);color:var(--accent)}
-.mr-v{display:flex;align-items:baseline;gap:8px}
-.mr-v b{font-size:25px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
-  line-height:1}
-.mr-v s{text-decoration:none;margin-left:auto;font-size:9.5px;color:var(--muted);
-  font-variant-numeric:tabular-nums}
-.mr-bar{position:relative;height:6px;background:var(--surface-2);border-radius:1px;
-  overflow:hidden}
-.mr-bar i{display:block;height:100%;border-radius:1px}
-.mr-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);
-  text-decoration:none;transform:translateX(-1px)}
-.mr-f{display:flex}
-.mr-f .kc-chip{font-size:9.5px}
 
 
 .mdrawer{margin:2px 0 14px;border:1px solid var(--hair);border-radius:3px;
@@ -885,6 +862,14 @@ html[data-theme="dark"] .cd-h{background:linear-gradient(180deg,#1b2f46,#12202c)
   text-align:right}
 .vk-r b.t-good{color:#7ee0a8}.vk-r b.t-warn{color:#ffc46e}.vk-r b.t-crit{color:#ff8f8f}
 
+/* ---- the drawer's KPI rail ---- */
+.vrail{display:flex;flex-direction:column;min-width:0;min-height:0;
+  border-left:1px solid rgba(120,160,200,.14)}
+.vrail-h{padding:9px 14px 0;font-size:9.5px;text-transform:uppercase;
+  letter-spacing:.09em;font-weight:700;color:var(--vid-muted);
+  display:flex;min-width:0}
+.vrail-h span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---- detections list in the camera drawer ---- */
 .evt{padding:2px 14px 12px;display:flex;flex-direction:column;min-height:0}
 .evt h4{margin:8px 0 6px;font-size:9.5px;text-transform:uppercase;
@@ -914,7 +899,9 @@ html[data-theme="dark"] .cd-h{background:linear-gradient(180deg,#1b2f46,#12202c)
 .crumb button:hover{background:var(--accent-soft)}
 .crumb button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .crumb span{font-size:12px;font-weight:680;color:var(--ink)}
-.crumb i{font-style:normal;color:var(--rule);font-size:12px}
+/* the separator is the only thing telling a reader these are two levels and
+   not two words; --rule is 1.46:1, which is not a separator, it is a gap */
+.crumb i{font-style:normal;color:var(--muted);font-size:12px}
 
 /* leaderboard */
 .lb{width:100%;border-collapse:collapse;font-size:11.5px}
@@ -1095,7 +1082,8 @@ html[data-theme="dark"] .cd-h{background:linear-gradient(180deg,#1b2f46,#12202c)
     <button class="ghost" id="btnMeasured" aria-pressed="false">Measured</button>
     <button class="ghost" id="btnTables" aria-pressed="false">Table</button>
     <button class="ghost" id="btnTheme" aria-pressed="false"
-            title="Switch between the light and dark plane">Dark</button>
+            title="Switch between the light and dark plane"
+            aria-label="Switch to the dark plane"><i aria-hidden="true">◐</i><span>Dark</span></button>
     <div class="mh-div"></div>
     <div class="mstat" id="mstat"></div>
   </div>
@@ -1619,12 +1607,6 @@ function curveOf(camId,date,fromMin,toMin,bucketMin){
           idxOf:m=>clamp(Math.round((m-fromMin)/stepMin),0,out.length-1)};
 }
 /* mean of a set of cameras over an hour band, real data only */
-function hourMean(camIds,date,hour){
-  let a=0,n=0;
-  camIds.forEach(c=>{const s=SER10[c]&&SER10[c][date];if(!s)return;
-    for(let i=sl(hour*60);i<sl((hour+1)*60);i++) if(s[i]>=0){a+=s[i]/10;n++;}});
-  return n?a/n:null;
-}
 
 /* ---- centre / day rollups (measured) ---- */
 function roll(date,centre){
@@ -3023,28 +3005,6 @@ const instrCam=()=>{
   return e.length?e.reduce((a,b)=>((MCH[a]?MCH[a].inter:1)<(MCH[b]?MCH[b].inter:1)?a:b))
                  :busiestRoom();};
 
-function stationLine(id){
-  const sp=SP[id]; if(!sp.stations) return null;
-  const rec=D[S.date]&&D[S.date][id];
-  const heads=Math.max(0,Math.ceil(rec?rec.peak:0));
-  const used=Math.min(sp.stations,heads);
-  return {used,of:sp.stations,txt:used+" of "+sp.stations,
-          tone:used/sp.stations>=0.8?"good":used/sp.stations>=0.5?"warn":"crit"};
-}
-function tradeLine(id){
-  const t=tradeMatch(id);
-  if(!t) return {txt:"—",tone:null};
-  if(t.state==="unobserved") return {txt:"no session",tone:"crit"};
-  return {txt:TC[t.obs].n+" "+t.conf.toFixed(2),
-          tone:t.state==="match"?"good":"crit"};
-}
-function quietestRoom(){
-  const d=S.date;
-  let best=null,bv=1e9;
-  roomsIn().forEach(r=>{const x=D[d]&&D[d][r];
-    if(x&&x.running&&x.peak<bv){bv=x.peak;best=r;}});
-  return best||busiestRoom();
-}
 
 /* ---------------- the console ---------------- */
 function buildCameraPanel(opt){
@@ -3737,7 +3697,7 @@ function indiaMap(){
       const gnode=sv("g",{class:"mp-dot",tabindex:"0",role:"button",
         "aria-label":c.name+" "+pc(v)});
       gnode.appendChild(sv("circle",{cx:c.x,cy:c.y,r:side/95,fill:SC.col(v),
-        stroke:"#ffffff","stroke-width":side/420}));
+        stroke:CSSV("--geo-edge"),"stroke-width":side/420}));
       const pick=()=>setScope({lvl:"ctr",st:c.st,ctr:c.id});
       gnode.addEventListener("click",pick);
       gnode.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();}});
@@ -3908,40 +3868,6 @@ function concordPanel(){
 /* ---- the five headline rates, beside the map ----
    Selecting one recolours the map; opening one shows how the scope is
    spread against its reference. Nothing else competes for this slide. ---- */
-function metricRail(){
-  const a=scopeAgg(), rail=el("div",{class:"mrail"});
-  METRICS.forEach(x=>{
-    const v=a[x.k], SC=SCALES[x.k];
-    const spread=scopeList().map(c=>c.m[x.k]);
-    const below=spread.filter(y=>y<x.ref).length;
-    const on=x.k===S.metric;
-    const card=el("button",{class:"mr"+(on?" on":""),"aria-pressed":String(on),
-      "aria-expanded":"false"});
-    card.appendChild(el("div",{class:"mr-h"},[
-      srcDot(x.k==="enrol"?"declared":x.k==="concord"?"modelled":"measured"),
-      el("u",{text:x.n}),
-      el("i",{class:"mr-x",text:"▾"})]));
-    card.appendChild(el("div",{class:"mr-v"},[
-      el("b",{text:pc(v),style:"color:"+refInk(v,x.ref)}),
-      el("s",{text:"ref "+pc(x.ref)})]));
-    const bar=el("div",{class:"mr-bar"},[
-      el("i",{style:"width:"+clamp(v,0,100)+"%;background:"+refCol(v,x.ref)}),
-      el("u",{style:"left:"+clamp(x.ref,0,100)+"%"})]);
-    card.appendChild(bar);
-    card.appendChild(el("div",{class:"mr-f"},[
-      el("span",{class:"kc-chip t-"+(below/spread.length>0.5?"crit":
-        below/spread.length>0.25?"warn":"ok"),
-        html:'<i class="dt"></i>'+fmt(below)+" of "+fmt(spread.length)+" below reference"})]));
-    hoverable(card,'<div class="hd">'+x.n+'</div>'+x.sub+
-      "<br>Reference "+pc(x.ref)+" · scope "+scopeLabel());
-    card.addEventListener("click",()=>{
-      if(S.metric!==x.k){ S.metric=x.k; S.mopen=x.k; render(); return; }
-      toggleMetricDrawer(card,x.k);
-    });
-    rail.appendChild(card);
-  });
-  return rail;
-}
 
 /* the distribution behind a headline rate */
 let MDRAWER=null;
@@ -4932,7 +4858,7 @@ const btnTheme=document.getElementById("btnTheme");
 function applyTheme(dark,redraw){
   document.documentElement.setAttribute("data-theme",dark?"dark":"light");
   btnTheme.setAttribute("aria-pressed",String(dark));
-  btnTheme.textContent=dark?"Light":"Dark";
+  btnTheme.querySelector("span").textContent=dark?"Light":"Dark";
   btnTheme.setAttribute("aria-label",dark?"Switch to the light plane":"Switch to the dark plane");
   refreshPalette();
   if(redraw) render();

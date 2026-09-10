@@ -451,6 +451,60 @@ both themes.
 **When adding a component, it now has to survive two themes.** Re-run the contrast audit rather than
 looking at it; three of the six failures above were invisible to me until it was measured.
 
+## Audit (2026-09-10, third pass) — and the audit script
+
+A quick full audit. Five findings, four of them mine from the same day.
+
+**`.vrail` / `.vrail-h` had no CSS rule — the fourth instance of this pattern.** The camera drawer's
+rail header is the line that says *what the camera is evidence for* ("Cohort Detection Count · at this
+minute"), and it inherited `--ink` onto the drawer plane at **1.06:1**. Identical to `.evt` one commit
+earlier, `.km` before that, `.chip`/`.meter` before that. Note that the drawer contrast check run right
+after fixing `.evt` reported clean — it did not have the drawer open at the moment it scanned. **A
+targeted check that passes is only evidence about what it actually looked at.**
+
+**The dark-mode button pushed the masthead over at 1244px.** It added 58px to `.mh-right`, and the
+masthead needed 5px more than it had, so it wrapped to two rows and ate 45px of frame. Below 1400 the
+theme control now keeps its glyph and drops its word (`aria-label` carries the full meaning), and the
+masthead's column gap tightens 10px to 7px. **Adding a control to the masthead is a layout change;
+measure it at 1244, not at 1536.**
+
+**Five uncalled functions** — `hourMean`, `stationLine`, `tradeLine`, `quietestRoom` and `metricRail`
+(a whole rail component) — plus the ~1.6KB of `.mrail`/`.mr-*` CSS that only `metricRail` used. Deleted.
+Doing it exposed that my own rule #3 needs restating: I tried the comment-boundary delete again and the
+assertion caught it at 9,375 chars. **Delete by matching each rule, then diff the selector sets.**
+
+**The breadcrumb separator was `--rule` at 1.46:1** — the only thing telling a reader that "India" and
+"Andaman & Nicobar" are two levels rather than two words. Now `--muted`.
+
+### The audit script
+
+`scratchpad/audit.py` is worth rebuilding when needed. It reads the file as three parts (CSS, static
+HTML, JS) and checks:
+
+1. **classes emitted with no CSS rule** — the standing check, four hits so far, none of which ever
+   threw an error
+2. **CSS classes matching nothing anywhere else** — dead rules
+3. **uncalled top-level functions**
+4. **light hexes hard-coded in the chart code**, excluding the dark-plane canvas
+5. **two-source violations** — `committedCoveredMin`, `headToMachine`, `lateStart`/`earlyFinish`
+   reaching a KPI
+6. **`src:"measured"` cards whose body touches `MCH`/`MI`**
+7. **notes promising a mark the card has no slot for**
+8. **`bars()` with a nullable series and an unguarded `fmtV`**
+9. **live grammar**
+10. **click handlers on non-focusable nodes**
+
+Known false positives, all verified: concat prefixes (`b-`, `c`, `n`, `sd-`), page functions referenced
+as `fn:pageOverview` in `PAGES`, the deliberate `#ffffff` inside `inkOn()`, and click handlers on nodes
+that are already `el("button", …)`.
+
+The browser half runs both themes at four viewports (1244×845, 1366×768, 1536×1030, 1920×1080) over
+3 scopes × 2 days × 5 tabs × every slide, checking NaN/undefined, scroll in both axes, masthead clip
+**and masthead wrap**, slide overflow, band under content, controls escaping their card, and every
+text node's contrast against its own computed background — plus the drawer opened separately in each
+theme, and the Measured-only toggle. Final state: **zero findings on all four viewports in both
+themes, zero JS errors.**
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

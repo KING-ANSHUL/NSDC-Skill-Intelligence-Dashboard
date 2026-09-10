@@ -382,6 +382,31 @@ overflows identically and also clips the masthead by 147px), it is below any pre
 was left alone rather than papered over. A widened packer reserve was tried for it, changed nothing,
 and was reverted — **a change that fixes nothing but re-packs every slide is not worth keeping.**
 
+## A component with no CSS rule, again (2026-09-10)
+
+Third time this pattern has cost something, so it is now a standing check.
+
+The camera drawer's detections list is emitted with `.evt` and `.evtlist`, and **neither class had a
+rule anywhere in the file.** So it inherited `--ink` (#0e1720) from the body and painted it on the
+drawer's `--vid` plane (#0a0f16): a measured contrast ratio of **1.06:1**. It also carried default
+`<h4>` margins and default list bullets. The text was in the DOM, laid out correctly, and unreadable —
+Anshul could only tell by looking at it.
+
+The list now speaks the rail's own language, the one `.vk-r` already uses: `--vid-muted` for the
+heading and the timestamp (6.13:1), `--vid-ink` for the detection itself (15.52:1), hairline row
+separators, tabular timestamps. It is capped at 148px and scrolls, and because a capped list that
+appends in time order hides its newest line — the one the presenter is talking about — it scrolls
+itself to the bottom on every update.
+
+The timestamp is deliberately `--vid-muted` and not the `#9ecbff` the drawer uses elsewhere: this rail
+carries no judgement, and the dashboard has exactly one colour channel for judgement.
+
+**The standing check:** after adding any component, grep the stylesheet for the class you just emitted.
+`.km` (fourteen KPI cards showing a value with a zero-height transparent mark), `.chip`/`.meter` (a
+whole second component set reachable only from dead code) and now `.evt` were all found this way, and
+none of them threw an error, logged anything, or failed a layout assertion. **An unstyled component
+does not fail loudly — it renders, and it is wrong.**
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

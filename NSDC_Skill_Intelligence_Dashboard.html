@@ -825,6 +825,21 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
   text-align:right}
 .vk-r b.t-good{color:#7ee0a8}.vk-r b.t-warn{color:#ffc46e}.vk-r b.t-crit{color:#ff8f8f}
 
+/* ---- detections list in the camera drawer ---- */
+.evt{padding:2px 14px 12px;display:flex;flex-direction:column;min-height:0}
+.evt h4{margin:8px 0 6px;font-size:9.5px;text-transform:uppercase;
+  letter-spacing:.09em;font-weight:700;color:var(--vid-muted)}
+.evtlist{margin:0;padding:0;list-style:none;
+  overflow-y:auto;min-height:0;max-height:148px;overscroll-behavior:contain}
+.evtlist li{display:flex;gap:9px;align-items:baseline;padding:4px 0;
+  border-bottom:1px solid rgba(120,160,200,.10);font-size:11.5px;line-height:1.35}
+.evtlist li:last-child{border-bottom:0}
+/* the timestamp stays neutral: this rail carries no judgement, and the
+   dashboard has exactly one colour channel for judgement */
+.evtlist time{flex:none;font-variant-numeric:tabular-nums;font-weight:700;
+  font-size:11px;color:var(--vid-muted)}
+.evtlist span{min-width:0;color:var(--vid-ink)}
+
 /* breadcrumb */
 .backbtn[hidden]{display:none}
 .backbtn{font-family:inherit;font-weight:650;display:inline-flex;align-items:center;
@@ -3220,6 +3235,9 @@ function buildCameraPanel(opt){
         el("time",{text:hm(e.m)}),el("span",{text:e.txt})])));
       if(!shownEvts.length) evtList.appendChild(el("li",{},[
         el("span",{style:"color:var(--vid-muted)",text:"No events yet at this minute"})]));
+      /* the list is capped and scrolls, so keep the most recent detection —
+         the one the scrubber is sitting on — in view */
+      evtList.scrollTop=evtList.scrollHeight;
     }
     if(!once) camLoop=requestAnimationFrame(frame);
   }

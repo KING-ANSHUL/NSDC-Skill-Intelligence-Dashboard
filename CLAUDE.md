@@ -505,6 +505,41 @@ text node's contrast against its own computed background — plus the drawer ope
 theme, and the Measured-only toggle. Final state: **zero findings on all four viewports in both
 themes, zero JS errors.**
 
+## Two systems owning one corner (2026-11-12)
+
+Recording the camera drawer for a deck is what exposed this — it only shows in a
+frame where the room is empty, which no static screenshot had caught.
+
+The scene canvas paints a resource read-out ("15 OF 20 WORKSTATIONS IN USE", and for
+an exam room the viva line and the malpractice flag) in its **bottom-left**. The HUD
+paints `.hud-bl` — IN FRAME / SOURCE / ZONE DWELL — in the **same bottom-left**, as
+HTML over the same box. Two systems, one corner, neither aware of the other.
+
+That collision was invisible because `.vstage .hud{bottom:92px}` was pushing the HUD
+*off the canvas entirely* and onto the transport: the chip row hung 32px below the
+canvas and sat on the scrubber. The constant was simply wrong — the transport is
+124px tall at presentation width, not 92 — so the bug was hiding a second bug.
+
+Both are fixed, and the shape of each fix is the point:
+
+- **The HUD is pinned to the canvas, measured, not guessed.** `frame()` sets
+  `hud.style.bottom = stage.clientHeight - cvs.clientHeight` (only when it changes).
+  The transport's height is not a constant — it carries a ruler, a key row and a
+  speed select that can wrap — so any fixed offset is a guess that will drift.
+- **The canvas yields the strip the HTML owns.** `HUD_FOOT = 40` names the vertical
+  band at the bottom of the scene canvas that the HTML chip rows are drawn over, and
+  every canvas-painted element in that corner is positioned against it
+  (`H - HUD_FOOT - 16` instead of `H - 24`). **If you paint into the scene canvas
+  near an edge, check what HTML the HUD puts there first.**
+
+Verified across all four room types (computer lab, wiring lab, welding bay,
+assessment hall): HUD ends 10px inside the canvas, chip row clears the transport by
+20px, zero JS errors.
+
+Still there, deliberately: in a narrow drawer the back row of desk numbers sits
+behind the chip row. The chips are semi-opaque and it reads fine; fixing it properly
+means reworking the scene's perspective, which is not worth it for a mockup.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

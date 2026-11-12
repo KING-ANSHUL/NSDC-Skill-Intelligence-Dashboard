@@ -9,3 +9,4 @@ _*.json
 .claude/scheduled_tasks.lock
 .playwright-mcp/
 *.png
+*.mp4

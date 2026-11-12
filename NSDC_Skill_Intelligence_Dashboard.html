@@ -364,7 +364,9 @@ body.focus-measured .is-modelled:hover{opacity:1;filter:none}
 .tl-scale{display:flex;justify-content:space-between;
   font-size:10px;letter-spacing:.06em;color:var(--vid-muted);
   font-variant-numeric:tabular-nums}
-.vstage .hud{bottom:92px}   /* clears the transport + its ruler and key row */
+/* bottom is set from the canvas's real height in frame() — a hard-coded offset
+   for "the transport" was 32px short and dropped the HUD onto the scrubber */
+.vstage .hud{bottom:124px}
 
 
 .cvlist.plain li{grid-template-columns:1fr auto}
@@ -2447,6 +2449,9 @@ function buildRoomPlate(sc,W,H){
 }
 
 /* ---------------- frame render ---------------- */
+/* vertical space at the bottom of the scene canvas that the HTML HUD's
+   bottom-left/right chip rows are drawn over (.hud-bl{bottom:10px} + chip height) */
+const HUD_FOOT=40;
 function drawScene(ctx,sc,W,H,detail){
   ctx.clearRect(0,0,W,H);
   if(VIDEO_EL&&VIDEO_EL.readyState>=2){
@@ -2633,7 +2638,9 @@ function drawScene(ctx,sc,W,H,detail){
               (shared?"  ·  "+shared+" SHARED":"");
     ctx.font="700 9px "+CSSV("--font");
     const tw=ctx.measureText(txt).width;
-    const y0=sc.viva?H-44:H-24;
+    /* the HTML HUD's bottom-left chip row occupies the lowest HUD_FOOT px of
+       this canvas; anything painted there has to start above it */
+    const y0=sc.viva?H-HUD_FOOT-38:H-HUD_FOOT-16;
     ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,y0,tw+14,16);
     ctx.fillStyle=shared?"#ffc46e":"#a8e6c4";ctx.fillText(txt,17,y0+11);
     if(shared&&sc.sp.type==="assessment"){
@@ -2641,8 +2648,8 @@ function drawScene(ctx,sc,W,H,detail){
       const flag="⚠ MALPRACTICE FLAG · "+w2.n+" CANDIDATES AT DESK "+
         String(w2.i+1).padStart(2,"0");
       const fw=ctx.measureText(flag).width;
-      ctx.fillStyle="rgba(176,32,32,.92)";ctx.fillRect(10,H-22,fw+14,16);
-      ctx.fillStyle="#fff";ctx.fillText(flag,17,H-11);
+      ctx.fillStyle="rgba(176,32,32,.92)";ctx.fillRect(10,H-HUD_FOOT-16,fw+14,16);
+      ctx.fillStyle="#fff";ctx.fillText(flag,17,H-HUD_FOOT-5);
     }
   }
 
@@ -3202,7 +3209,7 @@ function buildCameraPanel(opt){
     const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
     return {ctx,w,h};
   }
-  let last=performance.now(),fps=0,acc=0,frames=0,tick=0,sparkedW=0,evtSig="";
+  let last=performance.now(),fps=0,acc=0,frames=0,tick=0,sparkedW=0,evtSig="",hudBotSet=0;
 
   function frame(now,once){
     const dt=Math.min(.05,(now-last)/1000);last=now;
@@ -3229,6 +3236,10 @@ function buildCameraPanel(opt){
     const fid=FOCUS,fsc=scenes[fid],sp=SP[fid];
     const A=sizeCanvas(cvs,.545,CAM_MAXH);
     drawScene(A.ctx,fsc,A.w,A.h,true);
+    /* the HUD overlays the CANVAS, not the stage — the transport below it is not
+       a fixed height, so measure rather than assume */
+    const hudBot=stage.clientHeight-cvs.clientHeight;
+    if(hudBot>0&&hudBot!==hudBotSet){hudBotSet=hudBot;hud.style.bottom=hudBot+"px";}
     tick++;
     /* repaint on any width change, not once — a resize used to leave the
        scrubber's backing store stretched and soft */

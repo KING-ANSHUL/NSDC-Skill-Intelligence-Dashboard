@@ -645,6 +645,22 @@ the front now, beside their own stock.
 shells are in the plate; how full each one is gets drawn per frame, which is what
 makes one trailer visibly full and another visibly empty above the biggest pile.
 
+**A drawn walk cannot run on the feed clock.** One round trip is 4.2 feed-minutes,
+which at 20x is 0.21 real seconds — five round trips a second, so the loaders were a
+blur. The playhead, the trips, the fills and the stock all belong to the feed clock;
+the walk does not, because it is a reconstruction rather than frames. It runs on the
+wall clock at `WALK_SECS` per trip, advances only while the replay plays so a paused
+frame holds still, and the canvas says **figure motion indicative** out loud. Any
+scene that animates a person against a compressed timeline has this problem.
+
+**A truck backed into a hole in a wall is a dark rectangle.** That is all the camera
+could see, and it is why nobody could tell what they were looking at. The trucks are
+parked on an open apron now, rear doors to the lens and the body receding — a box,
+a cab, wheels and a plate. They are also **parked parallel** (`dir` fixed at +1, not
+mirrored about the frame centre), because mirroring the right-hand pair inward made
+the middle of the row read as a tangle, and real trucks on an apron are parallel. The
+row is drawn right to left so each nearer rig overlaps the one beyond it.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

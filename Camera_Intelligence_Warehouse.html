@@ -232,7 +232,13 @@ const ONTOLOGY={
   mustClearBeforeDue:true          // a truck has a departure slot
 };
 
-const TRIP=4.2;                    // minutes for one lane -> truck -> lane round trip
+const TRIP=4.2;                    // minutes a real lane -> truck -> lane round trip
+/* The drawn walk is a reconstruction, not frames. Tying it to the feed clock
+   put five round trips in a second at 20x. It runs on the wall clock instead,
+   at one round trip every WALK_SECS, and advances only while the replay plays
+   so a paused frame stays still. */
+const WALK_SECS=7;
+let WALK=0;
 const PER_TRIP=6;                  // cartons carried per trip
 
 /* identities: every loader belongs to a dock, and keeps its id all shift */
@@ -266,19 +272,19 @@ function stateAt(min){
   let inFrame=0;
   WORKERS.forEach(w=>{
     inFrame++;
-    if(!w.dock){                                   // aisle checker, walks across
-      const u=((min*0.6+w.ph*40)%40)/40;
-      pos[w.id]={x:0.10+0.80*(u<0.5?u*2:2-u*2),y:0.50,carry:false,dock:null};
+    if(!w.dock){                                   // apron checker, walks across
+      const u=(WALK*0.35+w.ph)%1;
+      pos[w.id]={x:0.10+0.80*(u<0.5?u*2:2-u*2),y:0.54,carry:false,dock:null};
       return;
     }
     const d=DOCKS[DI[w.dock]];
-    const u=((min/TRIP)+w.ph)%1;                   // one round trip
+    const u=(WALK+w.ph)%1;                         // one round trip
     /* 0 .. .42 lane -> truck carrying, .42 .. .5 at truck, .5 .. .92 back empty */
     let y,carry;
-    if(u<0.42){ y=lerp(0.66,0.26,u/0.42); carry=true; }
-    else if(u<0.52){ y=0.26; carry=true; }
-    else if(u<0.94){ y=lerp(0.26,0.66,(u-0.52)/0.42); carry=false; }
-    else { y=0.66; carry=false; }
+    if(u<0.40){ y=lerp(0.72,0.44,u/0.40); carry=true; }       // to the tail-lift
+    else if(u<0.52){ y=0.44; carry=true; }                      // handing it up
+    else if(u<0.92){ y=lerp(0.44,0.72,(u-0.52)/0.40); carry=false; }
+    else { y=0.72; carry=false; }                               // picking the next
     if(carry) carrying.push(w.id);
     pos[w.id]={x:d.x+w.ox*0.105,y,carry,dock:w.dock};
   });
@@ -322,39 +328,92 @@ function buildPlate(W,H){
   for(let j=1;j<=5;j++){const y=j/5,a=proj(0,y,W,H),b=proj(1,y,W,H);
     g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
 
-  /* the dock wall: four openings with a truck backed into each */
+  /* the building behind the apron: shutters, not dock holes with nothing in them */
   DOCKS.forEach(d=>{
-    const q=proj(d.x,0.26,W,H), k=q.s*1.25, cx=q.x, by=q.y;
-    const dir=d.x<0.5?1:-1, U=k;
-    const prism=(ox,oy,w,ht,dep,t)=>{
-      const x=cx+ox*U,y=by+oy*U,W2=w*U,H2=ht*U,D=dep*U,sh=t||1;
-      g.fillStyle="rgba("+Math.round(26*sh)+","+Math.round(44*sh)+","+Math.round(62*sh)+",.97)";
-      g.fillRect(x-W2/2,y-H2,W2,H2);
-      g.beginPath();g.moveTo(x-W2/2,y-H2);g.lineTo(x+W2/2,y-H2);
-      g.lineTo(x+W2/2+D*dir,y-H2-D*0.5);g.lineTo(x-W2/2+D*dir,y-H2-D*0.5);g.closePath();
-      g.fillStyle="rgba("+Math.round(50*sh)+","+Math.round(79*sh)+","+Math.round(106*sh)+",.97)";g.fill();
-      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=1;
-      g.strokeRect(x-W2/2+.5,y-H2+.5,W2,H2);
-    };
-    /* dock opening in the wall */
-    g.fillStyle="rgba(8,14,20,.95)";
-    g.fillRect(cx-56*U,by-96*U,112*U,96*U);
-    g.strokeStyle="rgba(130,175,215,.26)";g.lineWidth=1.2;
-    g.strokeRect(cx-56*U+.5,by-96*U+.5,112*U,96*U);
-    /* trailer backed in: box body seen end-on, doors open */
-    prism(0,-6,96,78,16,1.06);
-    g.fillStyle="rgba(8,14,20,.92)";g.fillRect(cx-40*U,by-78*U,80*U,66*U);
-    g.strokeStyle="rgba(130,175,215,.18)";g.lineWidth=.8;   // corrugation
-    for(let i=1;i<6;i++){g.beginPath();g.moveTo(cx-40*U,by-78*U+i*11*U);
-      g.lineTo(cx+40*U,by-78*U+i*11*U);g.stroke();}
-    [-1,1].forEach(sd=>{                                     // open rear doors
-      g.fillStyle="rgba(34,54,74,.95)";
-      g.fillRect(cx+sd*48*U-(sd>0?0:10*U),by-80*U,10*U,72*U);
+    const q=proj(d.x,0.10,W,H), k=q.s, cx=q.x, by=q.y;
+    g.fillStyle="#16242f";g.fillRect(cx-46*k,by-62*k,92*k,62*k);
+    g.strokeStyle="rgba(130,175,215,.18)";g.lineWidth=1;
+    g.strokeRect(cx-46*k+.5,by-62*k+.5,92*k,62*k);
+    for(let i=0;i<8;i++){g.fillStyle="rgba(130,175,215,.09)";
+      g.fillRect(cx-44*k,by-60*k+i*7.4*k,88*k,3.4*k);}
+  });
+
+  /* ---- the trucks, parked rear-to-camera on the apron ----
+     SCALE: 30 units = 1 m, same as everywhere. A 2.5 m box, 2.8 m tall, with
+     the body receding away from the lens and a cab at the far end. Backed into
+     a hole in a wall all the camera could see was a dark rectangle, which is
+     why they did not read as trucks. ---- */
+  DOCKS.slice().reverse().forEach(d=>{
+    const q=proj(d.x,0.30,W,H), U=q.s*1.26, cx=q.x, by=q.y;
+    const dir=1;                              // parked parallel, all facing the same way
+    const BW=78, BH=84, DEP=112;              // box width, height, visible length
+    const dx=DEP*dir*U, dy=-DEP*0.42*U;       // where the far end sits
+
+    g.fillStyle="rgba(8,13,19,.46)";          // shadow under the whole rig
+    g.beginPath();g.ellipse(cx+dx*0.45,by+3*U,BW*0.95*U,10*U,0,0,7);g.fill();
+
+    /* side of the box — the face that says "this is long" */
+    g.beginPath();
+    g.moveTo(cx+dir*BW/2*U, by);
+    g.lineTo(cx+dir*BW/2*U+dx, by+dy);
+    g.lineTo(cx+dir*BW/2*U+dx, by+dy-BH*U);
+    g.lineTo(cx+dir*BW/2*U, by-BH*U);
+    g.closePath();
+    g.fillStyle="rgba(21,36,50,.97)";g.fill();
+    g.strokeStyle="rgba(130,175,215,.20)";g.lineWidth=1;g.stroke();
+    for(let i=1;i<5;i++){                     // side ribs
+      g.beginPath();
+      g.moveTo(cx+dir*BW/2*U+dx*i/5, by+dy*i/5);
+      g.lineTo(cx+dir*BW/2*U+dx*i/5, by+dy*i/5-BH*U);
+      g.strokeStyle="rgba(130,175,215,.10)";g.stroke();
+    }
+    /* roof */
+    g.beginPath();
+    g.moveTo(cx-dir*BW/2*U, by-BH*U);
+    g.lineTo(cx+dir*BW/2*U, by-BH*U);
+    g.lineTo(cx+dir*BW/2*U+dx, by+dy-BH*U);
+    g.lineTo(cx-dir*BW/2*U+dx, by+dy-BH*U);
+    g.closePath();
+    g.fillStyle="rgba(48,74,100,.96)";g.fill();
+
+    /* wheels along the side */
+    [0.30,0.46,0.86].forEach(t=>{
+      const wx=cx+dir*BW/2*U+dx*t, wy=by+dy*t;
+      g.fillStyle="rgba(10,16,23,.96)";
+      g.beginPath();g.ellipse(wx,wy-7*U,11*U,11*U,0,0,7);g.fill();
+      g.fillStyle="rgba(70,96,122,.75)";
+      g.beginPath();g.ellipse(wx,wy-7*U,4.4*U,4.4*U,0,0,7);g.fill();
     });
-    g.fillStyle="rgba(40,62,84,.95)";                        // dock leveller
-    g.fillRect(cx-44*U,by-8*U,88*U,10*U);
-    g.fillStyle="rgba(20,34,47,.9)";                         // bumpers
-    [-52,52].forEach(dx=>g.fillRect(cx+dx*U-4*U,by-16*U,8*U,12*U));
+
+    /* cab at the far end, stepped down from the box */
+    const kx=cx+dx*1.06, ky=by+dy*1.06;
+    g.fillStyle="rgba(26,44,62,.97)";
+    g.fillRect(kx-dir*BW*0.40*U,ky-BH*0.74*U,BW*0.46*U,BH*0.74*U);
+    g.fillStyle="rgba(96,170,232,.20)";      // windscreen
+    g.fillRect(kx-dir*BW*0.36*U,ky-BH*0.70*U,BW*0.38*U,BH*0.26*U);
+    g.fillStyle="rgba(48,74,100,.95)";
+    g.fillRect(kx-dir*BW*0.40*U,ky-BH*0.78*U,BW*0.46*U,BH*0.06*U);
+
+    /* rear face last, so it sits in front of everything behind it */
+    g.fillStyle="rgba(30,50,68,.98)";
+    g.fillRect(cx-BW/2*U,by-BH*U,BW*U,BH*U);
+    g.strokeStyle="rgba(140,185,225,.30)";g.lineWidth=1.2;
+    g.strokeRect(cx-BW/2*U+.5,by-BH*U+.5,BW*U,BH*U);
+    g.fillStyle="rgba(8,14,20,.92)";          // the opening, doors swung back
+    g.fillRect(cx-BW*0.40*U,by-BH*0.92*U,BW*0.80*U,BH*0.84*U);
+    [-1,1].forEach(sd=>{                      // open door leaves
+      g.fillStyle="rgba(38,60,82,.96)";
+      g.fillRect(cx+sd*BW*0.50*U-(sd>0?0:BW*0.09*U),by-BH*0.94*U,BW*0.09*U,BH*0.86*U);
+      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=.9;
+      g.strokeRect(cx+sd*BW*0.50*U-(sd>0?0:BW*0.09*U)+.5,by-BH*0.94*U+.5,
+                   BW*0.09*U,BH*0.86*U);
+    });
+    g.fillStyle="rgba(58,88,118,.95)";        // rear bumper
+    g.fillRect(cx-BW*0.46*U,by-9*U,BW*0.92*U,6*U);
+    g.font="700 "+Math.max(6,8*U)+"px "+CSSV("--font");
+    g.fillStyle="rgba(150,185,220,.55)";
+    const plate="HR-55-"+(1000+DI[d.id]*137);
+    g.fillText(plate,cx-g.measureText(plate).width/2,by-2*U);
   });
   return cv;
 }
@@ -378,8 +437,8 @@ function drawScene(ctx,W,H,st,min,t,onto){
   DOCKS.forEach(d=>{
     const crew=d.crew, bad=onto&&(crew<ONTOLOGY.minCrew||crew>ONTOLOGY.maxCrew);
     /* dock lane fence, from the wall down to the stock lane */
-    const q1=proj(d.x-0.097,0.175,W,H),q2=proj(d.x+0.097,0.175,W,H),
-          q3=proj(d.x+0.112,0.76,W,H),q4=proj(d.x-0.112,0.76,W,H);
+    const q1=proj(d.x-0.100,0.335,W,H),q2=proj(d.x+0.100,0.335,W,H),
+          q3=proj(d.x+0.115,0.82,W,H),q4=proj(d.x-0.115,0.82,W,H);
     ctx.beginPath();ctx.moveTo(q1.x,q1.y);ctx.lineTo(q2.x,q2.y);
     ctx.lineTo(q3.x,q3.y);ctx.lineTo(q4.x,q4.y);ctx.closePath();
     ctx.fillStyle=bad?"rgba(226,82,74,.11)":(crew?"rgba(126,203,255,.05)":"rgba(126,203,255,.02)");
@@ -390,25 +449,25 @@ function drawScene(ctx,W,H,st,min,t,onto){
 
     /* how full the trailer is — the other half of the same story */
     (function(){
-      const q=proj(d.x,0.26,W,H), k2=q.s*1.25, cx2=q.x, by2=q.y;
+      const q=proj(d.x,0.30,W,H), k2=q.s*1.26, cx2=q.x, by2=q.y;
       const frac=loadedAt(d,min)/d.cap;
-      const x0=cx2-40*k2, y1=by2-12*k2, hMax=66*k2, hh=hMax*frac;
+      const x0=cx2-78*0.40*k2, y1=by2-84*0.08*k2, hMax=84*0.84*k2, hh=hMax*frac;
       if(hh>0.5){
         ctx.fillStyle=bad&&crew===0?"rgba(226,82,74,.34)":"rgba(150,120,70,.42)";
-        ctx.fillRect(x0,y1-hh,80*k2,hh);
+        ctx.fillRect(x0,y1-hh,78*0.80*k2,hh);
         ctx.strokeStyle="rgba(170,140,85,.5)";ctx.lineWidth=.8;
         for(let i=1;i*13*k2<hh;i++){ctx.beginPath();
-          ctx.moveTo(x0,y1-i*13*k2);ctx.lineTo(x0+80*k2,y1-i*13*k2);ctx.stroke();}
+          ctx.moveTo(x0,y1-i*13*k2);ctx.lineTo(x0+78*0.80*k2,y1-i*13*k2);ctx.stroke();}
       }
       ctx.font="700 8.5px "+font;
       ctx.fillStyle=frac>=1?"#9fd4a8":(crew?"#8aa6bf":"#ff9d96");
       const pt=Math.round(frac*100)+"%";
-      ctx.fillText(pt,cx2-ctx.measureText(pt).width/2,by2-88*k2);
+      ctx.fillText(pt,cx2-ctx.measureText(pt).width/2,by2-92*k2);
     })();
 
     /* the stock lane: the whole point of the frame. Four stacks, four heights. */
     const stock=stockAt(d,min), units=Math.round(stock/26);
-    const base=proj(d.x,0.70,W,H), k=base.s;
+    const base=proj(d.x,0.755,W,H), k=base.s;
     for(let i=0;i<units;i++){
       const col=i%3, row=Math.floor(i/3);
       const bx=base.x+(col-1)*26*k, byy=base.y-row*13*k;
@@ -471,7 +530,8 @@ function drawScene(ctx,W,H,st,min,t,onto){
 
   ctx.font="700 9px "+font;
   const line="TRACKING "+WORKERS.length+" IDENTITIES · "+st.inFrame+" IN FRAME · "+
-             st.carrying.length+" CARRYING";
+             st.carrying.length+" CARRYING   ·   FIGURE MOTION INDICATIVE · "+
+             "TRIPS AND FILL FROM TRACKING";
   const tw=ctx.measureText(line).width;
   ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,H-HUD_FOOT-16,tw+14,16);
   ctx.fillStyle="#a8c8e6";ctx.fillText(line,17,H-HUD_FOOT-5);
@@ -581,7 +641,10 @@ function syncOnto(){
 }
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
-  if(playing&&!dragging){head+=speed*dt;if(head>=SHIFT_TO)head=SHIFT_FROM;}
+  if(playing&&!dragging){
+    head+=speed*dt;if(head>=SHIFT_TO)head=SHIFT_FROM;
+    WALK+=dt/WALK_SECS;                 // the walk has its own, readable pace
+  }
   const min=Math.floor(head), W=stage.clientWidth, H=stage.clientHeight;
   const st=stateAt(head);
   drawScene(sizeCanvas(cv,W,H),W,H,st,min,now/1000,onto);

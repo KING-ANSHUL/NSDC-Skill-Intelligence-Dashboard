@@ -282,6 +282,11 @@ const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const lerp=(a,b,t)=>a+(b-a)*t;
 const hm=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(Math.floor(m%60)).padStart(2,"0");
 const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+/* 2x on a 1600x900 stage is 3200x1800 pixels to fill every frame, and the extra
+   sharpness is invisible at these line weights. 1.5 is the trade. */
+const DPR=Math.min(1.5,devicePixelRatio||1);
+/* reading a custom property forces a style recalc, and it never changes */
+let FONT="";
 
 /* ================================================================
    2 · THE FLOOR — six hubs, laid out so the near row carries the
@@ -508,8 +513,9 @@ const HUD_FOOT=42;
    ================================================================ */
 let PLATE=null,PW=0,PH=0;
 function buildPlate(W,H){
-  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
-  const g=cv.getContext("2d");
+  const cv=document.createElement("canvas");
+  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
+  const g=cv.getContext("2d");g.setTransform(DPR,0,0,DPR,0,0);
   const horizon=H*0.17, r=rng(hashStr("plate"));
 
   const air=g.createLinearGradient(0,0,0,H);
@@ -756,9 +762,11 @@ function spot(w,h,i,n){
 
 function drawScene(ctx,W,H,st,min,t,onto){
   if(!PLATE||PW!==W||PH!==H){PLATE=buildPlate(W,H);PW=W;PH=H;}
+  /* blit the plate 1:1 in device pixels — rescaling a full-screen image
+     every frame was the single most expensive thing in the loop */
   ctx.clearRect(0,0,W,H);
-  ctx.drawImage(PLATE,0,0);
-  const font=CSSV("--font");
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(PLATE,0,0);ctx.restore();
+  const font=FONT||(FONT=CSSV("--font"));
 
   /* ---- zone fences. Neutral unless an ontology rule is broken. ---- */
   HUBS.forEach(h=>{
@@ -809,16 +817,26 @@ function drawScene(ctx,W,H,st,min,t,onto){
     const p=proj(pos.x,pos.y,W,H),k=p.s;
     /* a tracked identity keeps a short tail — that IS the tracking skill */
     if(moving){
+      /* the track, fading back the way it came — this is the tracking skill
+         made visible, and it is the same line the classroom drawer drew */
       const a=HUBS[HUBI[moving.from]],b=HUBS[HUBI[moving.to]];
-      ctx.strokeStyle="rgba(150,225,255,.30)";ctx.lineWidth=1.3;
-      ctx.beginPath();
-      for(let s=0;s<=10;s++){
-        const u=Math.max(0,moving.p-(1-s/10)*0.35);
+      const pts=[];
+      for(let s=0;s<=16;s++){
+        const u=Math.max(0,moving.p-(1-s/16)*0.55);
         const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
-        const q=proj(lerp(a.x,b.x,e),lerp(a.y+a.dy*0.38,b.y+b.dy*0.38,e),W,H);
-        s?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);
+        pts.push(proj(lerp(a.x,b.x,e),lerp(a.y+a.dy*0.38,b.y+b.dy*0.38,e),W,H));
       }
-      ctx.stroke();
+      for(let s=1;s<pts.length;s++){
+        const al=s/pts.length;
+        ctx.strokeStyle="rgba(150,225,255,"+(0.06+0.38*al).toFixed(3)+")";
+        ctx.lineWidth=0.8+1.7*al;
+        ctx.beginPath();ctx.moveTo(pts[s-1].x,pts[s-1].y);
+        ctx.lineTo(pts[s].x,pts[s].y);ctx.stroke();
+      }
+      for(let s=3;s<pts.length-1;s+=4){
+        ctx.fillStyle="rgba(150,225,255,.34)";
+        ctx.beginPath();ctx.arc(pts[s].x,pts[s].y,1.6,0,7);ctx.fill();
+      }
     }
     const sway=Math.sin(t*0.8+w.ph)*0.7;
     const torso=(moving?52:46)*k, headR=8.0*k, shoulder=21*k, waist=15*k;
@@ -832,9 +850,7 @@ function drawScene(ctx,W,H,st,min,t,onto){
     ctx.lineTo(cx+shoulder*0.3,ty);
     ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
     ctx.lineTo(cx+waist/2,base);ctx.closePath();
-    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
-    bg.addColorStop(0,"rgba(176,206,231,.5)");bg.addColorStop(1,"rgba(118,150,182,.36)");
-    ctx.fillStyle=bg;ctx.fill();
+    ctx.fillStyle="rgba(150,181,209,.44)";ctx.fill();
     const hy=ty-headR*0.72;
     ctx.beginPath();ctx.ellipse(cx,hy,headR*0.84,headR,0,0,7);
     ctx.fillStyle="rgba(192,220,244,.6)";ctx.fill();
@@ -870,16 +886,26 @@ function drawScene(ctx,W,H,st,min,t,onto){
       const e=fl.moving.p<0.5?2*fl.moving.p*fl.moving.p:1-Math.pow(-2*fl.moving.p+2,2)/2;
       pos={x:lerp(a.x-a.dx*0.75,b.x-b.dx*0.75,e),
            y:lerp(a.y+a.dy*0.55,b.y+b.dy*0.55,e)};
-      ctx.setLineDash([]);ctx.strokeStyle="rgba(150,225,255,.34)";ctx.lineWidth=1.4;
-      ctx.beginPath();
-      for(let q=0;q<=10;q++){
-        const u=Math.max(0,fl.moving.p-(1-q/10)*0.3);
+      ctx.setLineDash([]);
+      const fp=[];
+      for(let q=0;q<=16;q++){
+        const u=Math.max(0,fl.moving.p-(1-q/16)*0.6);
         const e2=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
-        const pp=proj(lerp(a.x-a.dx*0.75,b.x-b.dx*0.75,e2),
-                      lerp(a.y+a.dy*0.55,b.y+b.dy*0.55,e2),W,H);
-        q?ctx.lineTo(pp.x,pp.y):ctx.moveTo(pp.x,pp.y);
+        fp.push(proj(lerp(a.x-a.dx*0.75,b.x-b.dx*0.75,e2),
+                     lerp(a.y+a.dy*0.55,b.y+b.dy*0.55,e2),W,H));
       }
-      ctx.stroke();
+      for(let q=1;q<fp.length;q++){
+        const al=q/fp.length;
+        ctx.strokeStyle=(bad?"rgba(255,150,142,":"rgba(170,232,255,")+
+                        (0.07+0.44*al).toFixed(3)+")";
+        ctx.lineWidth=0.9+1.9*al;
+        ctx.beginPath();ctx.moveTo(fp[q-1].x,fp[q-1].y);
+        ctx.lineTo(fp[q].x,fp[q].y);ctx.stroke();
+      }
+      for(let q=3;q<fp.length-1;q+=4){
+        ctx.fillStyle=bad?"rgba(255,150,142,.38)":"rgba(170,232,255,.38)";
+        ctx.beginPath();ctx.arc(fp[q].x,fp[q].y,1.7,0,7);ctx.fill();
+      }
     } else {
       const hh=HUBS[HUBI[fl.hub]];
       pos={x:hh.x-hh.dx*0.75,y:hh.y+hh.dy*0.55};
@@ -897,9 +923,7 @@ function drawScene(ctx,W,H,st,min,t,onto){
     ctx.lineTo(cx+shoulder*0.3,ty);
     ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
     ctx.lineTo(cx+waist/2,base);ctx.closePath();
-    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
-    bg.addColorStop(0,"rgba(198,226,248,.62)");bg.addColorStop(1,"rgba(132,166,198,.44)");
-    ctx.fillStyle=bg;ctx.fill();
+    ctx.fillStyle="rgba(172,200,226,.55)";ctx.fill();
     /* a vest band, so the floater is findable in a crowd without a hue */
     ctx.fillStyle="rgba(226,240,255,.5)";
     ctx.fillRect(cx-shoulder*0.42,ty+torso*0.36,shoulder*0.84,torso*0.13);
@@ -929,7 +953,7 @@ function drawScene(ctx,W,H,st,min,t,onto){
   /* ---- what the frame is, bottom-left, clear of the HTML chip row ---- */
   ctx.font="700 9px "+font;
   const line="TRACKING "+(WORKERS.length+1)+" IDENTITIES · "+st.inFrame+" IN FRAME · "+
-             st.transit.length+" IN TRANSIT";
+             st.transit.length+" IN TRANSIT   ·   TRAILS = TRACKED PATH";
   const tw=ctx.measureText(line).width;
   ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,H-HUD_FOOT-16,tw+14,16);
   ctx.fillStyle="#a8c8e6";ctx.fillText(line,17,H-HUD_FOOT-5);
@@ -950,10 +974,18 @@ const btnPlay=document.getElementById("btnPlay"), btnOnto=document.getElementByI
 const selSpeed=document.getElementById("speed");
 
 let head=SHIFT_FROM, playing=true, speed=20, onto=true, dragging=false;
-let last=performance.now(), lastMin=-1, sparkedW=0;
+let last=performance.now(), lastMin=-1, sparkedW=0, lastRail=0;
+/* offline rendering drives the clock itself, so every frame is exact */
+let TNOW=null, OFFLINE=false;
+window.__frameAt=(tSec,headVal,walkVal,ontoVal)=>{
+  playing=false; TNOW=tSec; head=headVal;
+  if(typeof WALK!=="undefined") WALK=walkVal;
+  if(onto!==ontoVal){onto=ontoVal;syncOnto();}
+  lastMin=-1; lastRail=-1e9; OFFLINE=true; frame(performance.now());
+};
 
 function sizeCanvas(c,w,h){
-  const dpr=Math.min(2,devicePixelRatio||1);
+  const dpr=DPR;
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){
     c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return ctx;
@@ -1089,14 +1121,16 @@ function frame(now){
   const W=stage.clientWidth,H=stage.clientHeight;
   const ctx=sizeCanvas(cv,W,H);
   const st=stateAt(min);
-  drawScene(ctx,W,H,st,min,now/1000,onto);
+  drawScene(ctx,W,H,st,min,(TNOW!=null?TNOW:now/1000),onto);
 
   elTime.textContent=hm(head);
   headEl.style.left=((head-SHIFT_FROM)/(SHIFT_TO-SHIFT_FROM)*100)+"%";
   paintSpark();
 
-  if(min!==lastMin){
-    lastMin=min;
+  /* the rail is read, not watched. Five refreshes a second is plenty; at 20x
+     playback the feed minute ticks twenty times a second. */
+  if(min!==lastMin && (now-lastRail>200 || Math.abs(min-lastMin)>2)){
+    lastMin=min; lastRail=now;
     elTs.textContent=hm(head)+"  14/08/2026";
     elFrame.textContent=st.inFrame;
     elTrack.textContent=WORKERS.length+1;   // +1: the floater
@@ -1106,7 +1140,7 @@ function frame(now){
     renderFloater(st,min);
     eventRows(min);
   }
-  requestAnimationFrame(frame);
+  if(!OFFLINE) requestAnimationFrame(frame);
 }
 
 /* transport */

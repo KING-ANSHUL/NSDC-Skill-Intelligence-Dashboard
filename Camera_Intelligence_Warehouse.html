@@ -207,6 +207,11 @@ body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--font
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
 const hm=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(Math.floor(m%60)).padStart(2,"0");
 const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+/* 2x on a 1600x900 stage is 3200x1800 pixels to fill every frame, and the extra
+   sharpness is invisible at these line weights. 1.5 is the trade. */
+const DPR=Math.min(1.5,devicePixelRatio||1);
+/* reading a custom property forces a style recalc, and it never changes */
+let FONT="";
 function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
 function rng(seed){let a=seed>>>0;return function(){a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
 
@@ -267,26 +272,30 @@ function stockAt(d,min){
   return Math.max(0, d.cap - loadedAt(d,min) + el*0.10);
 }
 
+/* one position function, so the PAST can be sampled exactly the way the
+   present is — that is what makes a trail a record rather than a decoration */
+function workerPos(w,walk){
+  if(!w.dock){                                     // apron checker, walks across
+    const u=(walk*0.35+w.ph)%1;
+    return {x:0.10+0.80*(u<0.5?u*2:2-u*2),y:0.54,carry:false,dock:null};
+  }
+  const d=DOCKS[DI[w.dock]];
+  const u=(walk+w.ph)%1;                           // one round trip
+  let y,carry;
+  if(u<0.40){ y=lerp(0.72,0.44,u/0.40); carry=true; }        // to the tail-lift
+  else if(u<0.52){ y=0.44; carry=true; }                      // handing it up
+  else if(u<0.92){ y=lerp(0.44,0.72,(u-0.52)/0.40); carry=false; }
+  else { y=0.72; carry=false; }                               // picking the next
+  return {x:d.x+w.ox*0.105,y,carry,dock:w.dock,u};
+}
 function stateAt(min){
   const pos={}, carrying=[];
   let inFrame=0;
   WORKERS.forEach(w=>{
     inFrame++;
-    if(!w.dock){                                   // apron checker, walks across
-      const u=(WALK*0.35+w.ph)%1;
-      pos[w.id]={x:0.10+0.80*(u<0.5?u*2:2-u*2),y:0.54,carry:false,dock:null};
-      return;
-    }
-    const d=DOCKS[DI[w.dock]];
-    const u=(WALK+w.ph)%1;                         // one round trip
-    /* 0 .. .42 lane -> truck carrying, .42 .. .5 at truck, .5 .. .92 back empty */
-    let y,carry;
-    if(u<0.40){ y=lerp(0.72,0.44,u/0.40); carry=true; }       // to the tail-lift
-    else if(u<0.52){ y=0.44; carry=true; }                      // handing it up
-    else if(u<0.92){ y=lerp(0.44,0.72,(u-0.52)/0.40); carry=false; }
-    else { y=0.72; carry=false; }                               // picking the next
-    if(carry) carrying.push(w.id);
-    pos[w.id]={x:d.x+w.ox*0.105,y,carry,dock:w.dock};
+    const p=workerPos(w,WALK);
+    if(p.carry) carrying.push(w.id);
+    pos[w.id]=p;
   });
   const inZone={};DOCKS.forEach(d=>inZone[d.id]=0);
   WORKERS.forEach(w=>{const p=pos[w.id];if(p.dock&&p.y<0.40) inZone[p.dock]++;});
@@ -310,8 +319,10 @@ const HUD_FOOT=42;
 /* ---------------- the shed ---------------- */
 let PLATE=null,PW=0,PH=0;
 function buildPlate(W,H){
-  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  const cv=document.createElement("canvas");
+  cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);
   const g=cv.getContext("2d"), horizon=H*0.15;
+  g.setTransform(DPR,0,0,DPR,0,0);
   const air=g.createLinearGradient(0,0,0,H);
   air.addColorStop(0,"#0b131c");air.addColorStop(.5,"#0d1721");air.addColorStop(1,"#070d14");
   g.fillStyle=air;g.fillRect(0,0,W,H);
@@ -431,8 +442,11 @@ function drawBox(ctx,x,y,w,h,col,lw){
 
 function drawScene(ctx,W,H,st,min,t,onto){
   if(!PLATE||PW!==W||PH!==H){PLATE=buildPlate(W,H);PW=W;PH=H;}
-  ctx.clearRect(0,0,W,H);ctx.drawImage(PLATE,0,0);
-  const font=CSSV("--font");
+  /* blit the plate 1:1 in device pixels — rescaling a full-screen image
+     every frame was the single most expensive thing in the loop */
+  ctx.clearRect(0,0,W,H);
+  ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.drawImage(PLATE,0,0);ctx.restore();
+  const font=FONT||(FONT=CSSV("--font"));
 
   DOCKS.forEach(d=>{
     const crew=d.crew, bad=onto&&(crew<ONTOLOGY.minCrew||crew>ONTOLOGY.maxCrew);
@@ -493,6 +507,35 @@ function drawScene(ctx,W,H,st,min,t,onto){
     }
   });
 
+  /* ---- motion trails: where each identity has just been ----
+     Sampled from the same position function the figure uses, so the line is a
+     record of the track and not an effect drawn over it. ---- */
+  const TR_N=14, TR_STEP=0.011;
+  WORKERS.forEach(w=>{
+    const pts=[];
+    for(let i=TR_N;i>=1;i--){
+      const q=workerPos(w,WALK-i*TR_STEP);
+      /* a cycle that has wrapped would draw a line across the whole frame */
+      if(i<TR_N){const prev=workerPos(w,WALK-(i+1)*TR_STEP);
+        if(Math.abs(q.y-prev.y)>0.25) {pts.length=0;continue;}}
+      pts.push(proj(q.x,q.y,W,H));
+    }
+    const now=proj(st.pos[w.id].x,st.pos[w.id].y,W,H);
+    pts.push(now);
+    if(pts.length<3) return;
+    for(let i=1;i<pts.length;i++){
+      const a=i/pts.length;
+      ctx.strokeStyle="rgba(126,203,255,"+(0.05+0.30*a).toFixed(3)+")";
+      ctx.lineWidth=0.7+1.5*a;
+      ctx.beginPath();ctx.moveTo(pts[i-1].x,pts[i-1].y);
+      ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();
+    }
+    for(let i=2;i<pts.length-1;i+=4){              // sample marks along the track
+      ctx.fillStyle="rgba(150,225,255,.30)";
+      ctx.beginPath();ctx.arc(pts[i].x,pts[i].y,1.5,0,7);ctx.fill();
+    }
+  });
+
   /* people, far to near */
   const list=WORKERS.map(w=>({w,p:st.pos[w.id]})).sort((a,b)=>a.p.y-b.p.y);
   list.forEach(({w,p})=>{
@@ -508,9 +551,7 @@ function drawScene(ctx,W,H,st,min,t,onto){
     ctx.lineTo(cx+shoulder*0.3,ty);
     ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
     ctx.lineTo(cx+waist/2,base);ctx.closePath();
-    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
-    bg.addColorStop(0,"rgba(176,206,231,.5)");bg.addColorStop(1,"rgba(118,150,182,.36)");
-    ctx.fillStyle=bg;ctx.fill();
+    ctx.fillStyle="rgba(150,181,209,.44)";ctx.fill();
     ctx.beginPath();ctx.ellipse(cx,ty-headR*0.72,headR*0.84,headR,0,0,7);
     ctx.fillStyle="rgba(192,220,244,.6)";ctx.fill();
     if(p.carry){                                     // the carton in their hands
@@ -530,8 +571,8 @@ function drawScene(ctx,W,H,st,min,t,onto){
 
   ctx.font="700 9px "+font;
   const line="TRACKING "+WORKERS.length+" IDENTITIES · "+st.inFrame+" IN FRAME · "+
-             st.carrying.length+" CARRYING   ·   FIGURE MOTION INDICATIVE · "+
-             "TRIPS AND FILL FROM TRACKING";
+             st.carrying.length+" CARRYING   ·   TRAILS = TRACKED PATH · "+
+             "FIGURE MOTION INDICATIVE";
   const tw=ctx.measureText(line).width;
   ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,H-HUD_FOOT-16,tw+14,16);
   ctx.fillStyle="#a8c8e6";ctx.fillText(line,17,H-HUD_FOOT-5);
@@ -549,10 +590,18 @@ const elNote=document.getElementById("ontoNote"), btnPlay=document.getElementByI
 const btnOnto=document.getElementById("btnOnto"), selSpeed=document.getElementById("speed");
 
 let head=SHIFT_FROM, playing=true, speed=20, onto=true, dragging=false;
-let last=performance.now(), lastMin=-1, sparkedW=0;
+let last=performance.now(), lastMin=-1, sparkedW=0, lastRail=0;
+/* offline rendering drives the clock itself, so every frame is exact */
+let TNOW=null, OFFLINE=false;
+window.__frameAt=(tSec,headVal,walkVal,ontoVal)=>{
+  playing=false; TNOW=tSec; head=headVal;
+  if(typeof WALK!=="undefined") WALK=walkVal;
+  if(onto!==ontoVal){onto=ontoVal;syncOnto();}
+  lastMin=-1; lastRail=-1e9; OFFLINE=true; frame(performance.now());
+};
 
 function sizeCanvas(c,w,h){
-  const dpr=Math.min(2,devicePixelRatio||1);
+  const dpr=DPR;
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){
     c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return x;
@@ -647,19 +696,21 @@ function frame(now){
   }
   const min=Math.floor(head), W=stage.clientWidth, H=stage.clientHeight;
   const st=stateAt(head);
-  drawScene(sizeCanvas(cv,W,H),W,H,st,min,now/1000,onto);
+  drawScene(sizeCanvas(cv,W,H),W,H,st,min,(TNOW!=null?TNOW:now/1000),onto);
   elTime.textContent=hm(head);
   headEl.style.left=((head-SHIFT_FROM)/(SHIFT_TO-SHIFT_FROM)*100)+"%";
   paintSpark();
-  if(min!==lastMin){
-    lastMin=min;
+  /* the rail is read, not watched. Five refreshes a second is plenty; at 20x
+     playback the feed minute ticks twenty times a second. */
+  if(min!==lastMin && (now-lastRail>200 || Math.abs(min-lastMin)>2)){
+    lastMin=min; lastRail=now;
     elTs.textContent=hm(head)+"  14/08/2026";
     elFrame.textContent=st.inFrame; elCarry.textContent=st.carrying.length;
     elTrips.textContent=Math.round(DOCKS.reduce((a,d)=>a+d.crew,0)*60/TRIP);
     elBig.textContent=st.inFrame;
     dockRows(st,min); eventRows(min);
   }
-  requestAnimationFrame(frame);
+  if(!OFFLINE) requestAnimationFrame(frame);
 }
 btnPlay.addEventListener("click",()=>{playing=!playing;btnPlay.textContent=playing?"❚❚":"▶";});
 selSpeed.addEventListener("change",()=>{speed=+selSpeed.value;});

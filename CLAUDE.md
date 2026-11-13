@@ -661,6 +661,41 @@ mirrored about the frame centre), because mirroring the right-hand pair inward m
 the middle of the row read as a tangle, and real trucks on an apron are parallel. The
 row is drawn right to left so each nearer rig overlaps the one beyond it.
 
+## Smooth clips, and why a screencast judders (2026-11-13)
+
+The clips looked stuttery and the instinct was that the page was slow. Measuring
+said otherwise: 30fps flat, DOM rebuild 1.65ms, `stateAt` 0.015ms. **The judder
+was the capture, not the page** — a screencast samples whatever the compositor
+last painted, at a rate that does not divide the page's own refresh, so motion
+lands unevenly no matter how fast the page runs.
+
+**Clips are rendered frame by frame now, not recorded.** `window.__frameAt(tSec,
+head, walk, onto)` draws one exact frame for a given clock; the renderer walks
+1020 of them and ffmpeg assembles at a true 30fps CFR. Judder is then structurally
+impossible. Two things make it practical:
+
+- **Gate the page's own rAF loop while rendering offline** (`OFFLINE`). Leaving it
+  running made every screenshot wait on a surface that never settles: **1200ms per
+  frame, against 57ms with the loop stopped.** That one line is the difference
+  between twenty minutes a clip and one.
+- Screenshot as JPEG at the output size, not PNG at 2x.
+
+Canvas work worth keeping regardless, all found by measuring rather than guessing:
+**the plate was built at CSS size and blitted into a dpr-scaled context**, so every
+frame rescaled a full-screen image — it is built at device resolution and blitted
+1:1 under an identity transform now, which is both faster and sharper. `DPR` is
+capped at 1.5. Per-person linear gradients became flat fills. `CSSV()` is read once
+into `FONT` instead of forcing a style recalc every frame. The rail refreshes at
+5Hz rather than once per feed-minute, which at 20x was twenty DOM rebuilds a second.
+
+**Motion trails are the picture of what tracking sells.** Both files draw a fading
+polyline with sample dots behind each moving identity, the way the classroom drawer
+drew the instructor. In the warehouse the trail is sampled from `workerPos()` — the
+same function the figure uses, just called at `WALK - i*step` — so the line is a
+record of the track rather than an effect painted over it. Guard the wrap: when a
+cycle rolls over, the sampled previous position jumps the length of the lane and
+draws a line across the whole frame.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera Intelligence — Warehouse Dispatch</title>
+<style>
+/* ============================================================
+   CAMERA INTELLIGENCE · WAREHOUSE
+   Same model, same two skills (headcount + tracking), same rule:
+   we report signals, not verdicts. The scene is the one from the
+   business meeting — four trucks, five people loading one of them,
+   two on the next, one on the next, nobody on the fourth, and the
+   stock in front of each dock going down at four different speeds.
+   Nobody here says that is wrong. The ontology says that.
+   ============================================================ */
+:root{
+  --font:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --paper:#f6f7f9; --surface:#fff; --ink:#0e1720; --ink-2:#3d4e5e; --muted:#6b7f91;
+  --rule:#d8dfe6; --hair:#e7ecf1; --accent:#1f6fd0;
+  --vid:#0a0f16; --vid-ink:#dfe8f2; --vid-muted:#7e94aa; --vid-line:#1e2b39;
+  --sig:#7ecbff; --crit:#e2524a;
+  --r-ctl:999px; --h-ctl:26px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--font);
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+.app{height:100%;display:flex;flex-direction:column;min-height:0}
+.mast{display:flex;align-items:center;gap:14px;padding:9px 18px;background:var(--surface);
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.mast h1{margin:0;font-size:14.5px;font-weight:670;letter-spacing:-.01em;white-space:nowrap}
+.mast h1 span{color:var(--muted);font-weight:500}
+.vsel{display:flex;gap:2px;background:#eef1f5;border-radius:var(--r-ctl);padding:2px}
+.vsel a,.vsel button{font-family:inherit;font-size:11px;font-weight:650;letter-spacing:.02em;
+  border:0;background:none;color:var(--ink-2);padding:0 11px;height:22px;line-height:22px;
+  border-radius:var(--r-ctl);cursor:pointer;text-decoration:none;display:inline-block}
+.vsel [aria-pressed=true]{background:var(--surface);color:var(--ink);
+  box-shadow:0 1px 2px rgba(16,32,48,.14)}
+.mast-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.skills{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);font-weight:650}
+.skills i{display:inline-flex;align-items:center;gap:4px;font-style:normal;color:var(--ink-2);
+  background:#eef4fa;border:1px solid #d6e4f1;border-radius:var(--r-ctl);padding:2px 8px;
+  font-size:10px;letter-spacing:.06em}
+.skills i b{width:5px;height:5px;border-radius:50%;background:var(--accent);font-weight:400}
+.synth{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8a6a1f;
+  background:#fdf4de;border:1px solid #efdfae;border-radius:2px;padding:3px 8px;font-weight:650}
+.onto{display:flex;align-items:center;gap:8px;height:var(--h-ctl);padding:0 12px;
+  border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--surface);
+  font-family:inherit;font-size:11px;font-weight:650;color:var(--ink-2);cursor:pointer}
+.onto .sw{width:26px;height:14px;border-radius:999px;background:#cdd6df;position:relative;
+  transition:background .16s ease;flex:none}
+.onto .sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;
+  border-radius:50%;background:#fff;transition:transform .16s ease;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.onto[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:#f2f8ff}
+.onto[aria-pressed=true] .sw{background:var(--accent)}
+.onto[aria-pressed=true] .sw::after{transform:translateX(12px)}
+
+.console{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2.05fr) minmax(0,1fr);
+  background:var(--vid);border-top:1px solid var(--vid-line)}
+.left{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--vid-line)}
+.stage{position:relative;flex:1;min-height:0;background:var(--vid)}
+.stage canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud-tl,.hud-tr,.hud-bl,.hud-br{position:absolute;display:flex;align-items:center;gap:8px}
+.hud-tl{top:11px;left:12px}.hud-tr{top:11px;right:12px}
+.hud-bl{bottom:11px;left:12px}.hud-br{bottom:11px;right:12px}
+.hud-id{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--vid-ink);text-transform:uppercase}
+.hud-room{font-size:10.5px;letter-spacing:.06em;color:var(--vid-muted);text-transform:uppercase}
+.hud-ts{font-size:10.5px;color:var(--vid-ink);letter-spacing:.04em}
+.rec{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;
+  letter-spacing:.11em;color:#9fc4e6}
+.rec b{width:6px;height:6px;border-radius:50%;background:#7aa7d4}
+.hud-stat{display:flex;align-items:center;gap:6px;background:rgba(6,11,17,.74);
+  border:1px solid #22303f;padding:4px 8px;border-radius:2px}
+.hud-stat u{text-decoration:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--vid-muted);font-weight:650}
+.hud-stat s{text-decoration:none;font-size:12px;font-weight:680;color:var(--vid-ink)}
+
+.tl{display:flex;align-items:center;gap:10px;padding:9px 12px 7px;
+  border-top:1px solid var(--vid-line);background:#080d13;flex:none}
+.tl-btn{font-family:inherit;font-size:10px;color:var(--vid-ink);background:#16232f;
+  border:1px solid #273747;border-radius:2px;width:30px;height:24px;cursor:pointer}
+.tl-time{font-size:11.5px;font-weight:680;color:var(--vid-ink);min-width:46px;
+  font-variant-numeric:tabular-nums}
+.tl-track{position:relative;flex:1;height:34px;background:#0c141d;border:1px solid #1b2733;
+  border-radius:2px;cursor:pointer;min-width:0}
+.tl-spark{position:absolute;inset:0;width:100%;height:100%}
+.tl-head{position:absolute;top:-3px;bottom:-3px;width:2px;background:#e8f2fb;
+  box-shadow:0 0 0 1px rgba(8,14,20,.8);pointer-events:none}
+.tl-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--vid-muted);
+  letter-spacing:.06em;padding:3px 2px 0;font-variant-numeric:tabular-nums}
+.tl-speed{font-family:inherit;font-size:10px;padding:4px 5px;background:#16232f;
+  color:var(--vid-ink);border:1px solid #273747;border-radius:2px}
+
+.rail{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--vid)}
+.rail-h{padding:11px 14px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--vid-muted);font-weight:650}
+.rail-big{padding:2px 14px 0;display:flex;align-items:baseline;gap:7px}
+.rail-big b{font-size:30px;font-weight:680;letter-spacing:-.025em;color:var(--vid-ink);
+  font-variant-numeric:tabular-nums}
+.rail-big span{font-size:11.5px;color:var(--vid-muted)}
+.rail-sub{padding:3px 14px 10px;font-size:11px;color:var(--vid-muted);
+  border-bottom:1px solid var(--vid-line)}
+.rail-sub em{font-style:normal;color:#9fc4e6}
+.dh{display:grid;grid-template-columns:1fr 46px 46px 58px;gap:6px;padding:8px 14px 5px;
+  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--vid-muted);
+  font-weight:650;text-align:right}
+.dh span:first-child{text-align:left}
+.drow{display:grid;grid-template-columns:1fr 46px 46px 58px;gap:6px;align-items:center;
+  padding:7px 14px;border-bottom:1px solid #141f2b;font-size:12px;color:var(--vid-ink);
+  text-align:right}
+.drow u{text-decoration:none;display:flex;align-items:center;gap:7px;min-width:0;text-align:left}
+.drow u i{width:7px;height:7px;border-radius:1px;background:#4e7fa6;flex:none}
+.drow u s{text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.drow u s small{display:block;font-size:9.5px;color:var(--vid-muted);letter-spacing:.03em}
+.drow b{font-variant-numeric:tabular-nums;font-weight:680}
+.drow em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--vid-muted);font-size:11px}
+.drow .fill{position:relative;height:9px;background:#16232f;border-radius:1px;overflow:hidden}
+.drow .fill i{position:absolute;inset:0 auto 0 0;background:#4e7fa6}
+.drow.breach{background:rgba(226,82,74,.10)}
+.drow.breach u i{background:var(--crit)}
+.drow.breach b{color:#ff9d96}
+.drow.breach .fill i{background:var(--crit)}
+.evwrap{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--vid-line)}
+.evwrap h4{margin:0;padding:10px 14px 6px;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--vid-muted);font-weight:650}
+.evlist{margin:0;padding:0 14px 10px;list-style:none;overflow-y:auto;flex:1;min-height:0}
+.evlist li{display:grid;grid-template-columns:44px 1fr;gap:9px;padding:4px 0;
+  border-bottom:1px solid #141f2b;font-size:11.5px;color:var(--vid-ink)}
+.evlist li u{text-decoration:none;color:var(--vid-muted);font-variant-numeric:tabular-nums}
+.evlist li.flag{color:#ffb4ae}
+.onto-note{padding:9px 14px;font-size:11px;line-height:1.5;color:var(--vid-muted);
+  border-top:1px solid var(--vid-line);background:#080d13}
+.onto-note b{color:#9fc4e6;font-weight:650}
+@media(max-width:1080px){
+  .console{grid-template-columns:1fr;grid-template-rows:minmax(0,1.3fr) minmax(0,1fr)}
+  .left{border-right:0;border-bottom:1px solid var(--vid-line)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="mast">
+    <h1>Camera Intelligence <span>· Warehouse Dispatch</span></h1>
+    <nav class="vsel" aria-label="Vertical">
+      <a href="Camera_Intelligence_Mockups.html">Manufacturing</a>
+      <button aria-pressed="true">Warehouse</button>
+    </nav>
+    <div class="mast-r">
+      <span class="synth">Synthetic scene · illustrative</span>
+      <span class="skills">Skills live <i><b></b>Headcount</i><i><b></b>Tracking</i></span>
+      <button class="onto" id="btnOnto" aria-pressed="false"><span class="sw"></span>Ontology</button>
+    </div>
+  </header>
+
+  <div class="console">
+    <div class="left">
+      <div class="stage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="hud">
+          <div class="hud-tl"><span class="hud-id">CAM-04</span>
+            <span class="hud-room">· Outbound Dispatch · Docks 1–4</span></div>
+          <div class="hud-tr"><span class="rec"><b></b>REPLAY</span>
+            <span class="hud-ts" id="hTs">—</span></div>
+          <div class="hud-bl">
+            <span class="hud-stat"><u>In frame</u><s id="sFrame">—</s></span>
+            <span class="hud-stat"><u>Carrying</u><s id="sCarry">—</s></span>
+            <span class="hud-stat"><u>Trips / h</u><s id="sTrips">—</s></span>
+          </div>
+          <div class="hud-br"><span class="hud-stat"><u>Docks</u><s>4</s></span></div>
+        </div>
+      </div>
+      <div class="tl">
+        <button class="tl-btn" id="btnPlay" aria-label="Play or pause">❚❚</button>
+        <span class="tl-time" id="tlTime">06:00</span>
+        <div class="tl-track" id="track" role="slider" tabindex="0"
+             aria-label="Scrub the recorded shift" aria-valuemin="360" aria-valuemax="1080">
+          <canvas class="tl-spark" id="spark"></canvas><i class="tl-head" id="head"></i>
+        </div>
+        <select class="tl-speed" id="speed" aria-label="Playback speed">
+          <option value="4">4×</option><option value="8">8×</option>
+          <option value="20" selected>20×</option><option value="60">60×</option>
+        </select>
+      </div>
+      <div class="tl-ax" style="padding:0 12px 8px"><span>06:00</span><span>12:00</span><span>18:00</span></div>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-h">People in frame · at this minute</div>
+      <div class="rail-big"><b id="rBig">—</b><span>people</span></div>
+      <div class="rail-sub" id="rSub">Headcount and tracking only. <em>No judgement applied.</em></div>
+      <div class="dh"><span>Dock</span><span>Crew</span><span>Trips</span><span>Truck</span></div>
+      <div id="docks"></div>
+      <div class="evwrap">
+        <h4>Detections at or before this minute</h4>
+        <ul class="evlist" id="events"></ul>
+      </div>
+      <div class="onto-note" id="ontoNote"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+"use strict";
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t;
+const hm=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(Math.floor(m%60)).padStart(2,"0");
+const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function rng(seed){let a=seed>>>0;return function(){a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
+
+const SHIFT_FROM=6*60, SHIFT_TO=18*60;
+
+/* ---- the scene from the meeting: four docks, four different crews ----
+   The imbalance IS the content. We do not say it is wrong; we show that the
+   same quantity of stock is leaving at four different speeds. */
+const DOCKS=[
+  {id:"D1",n:"Dock 1",crew:5,cap:420,due:14*60+30,lane:"Fast movers"},
+  {id:"D2",n:"Dock 2",crew:2,cap:360,due:15*60+0, lane:"Mixed pallets"},
+  {id:"D3",n:"Dock 3",crew:1,cap:300,due:16*60+0, lane:"Returns"},
+  {id:"D4",n:"Dock 4",crew:0,cap:380,due:13*60+45,lane:"Inbound overflow"}
+];
+const DI={};DOCKS.forEach((d,i)=>DI[d.id]=i);
+DOCKS.forEach((d,i)=>{d.x=0.155+i*0.23;});
+
+/* the ontology is the operator's, not ours */
+const ONTOLOGY={
+  source:"Site ontology · Outbound Dispatch · supplied by operator",
+  minCrew:2,                       // a dock with a truck on it is never worked alone
+  maxCrew:4,                       // more than four on one tail-lift is in each other's way
+  mustClearBeforeDue:true          // a truck has a departure slot
+};
+
+const TRIP=4.2;                    // minutes for one lane -> truck -> lane round trip
+const PER_TRIP=6;                  // cartons carried per trip
+
+/* identities: every loader belongs to a dock, and keeps its id all shift */
+const WORKERS=[];
+(function(){
+  const r=rng(hashStr("dispatch-floor"));
+  let id=201;
+  DOCKS.forEach(d=>{ for(let i=0;i<d.crew;i++)
+    WORKERS.push({id:id++,dock:d.id,ph:r(),conf:0.87+r()*0.11,
+                  ox:d.crew<2?0:(i/(d.crew-1)-0.5)}); });
+  /* two checkers who walk the aisle and belong to no dock */
+  WORKERS.push({id:id++,dock:null,ph:r(),conf:0.92,ox:0});
+  WORKERS.push({id:id++,dock:null,ph:r(),conf:0.90,ox:0});
+})();
+
+/* trips are a pure tracking output: a crossing of the lane line and back */
+const RATE=0.185;                  // cartons a minute per loader
+function loadedAt(d,min){
+  return Math.min(d.cap, d.crew*RATE*Math.max(0,min-SHIFT_FROM-10));
+}
+function tripsAt(d,min){ return Math.round(loadedAt(d,min)/PER_TRIP); }
+/* stock in the lane behind each dock: what has not left yet, plus the inbound
+   that keeps arriving whether or not anyone is shipping it out */
+function stockAt(d,min){
+  const el=Math.max(0,min-SHIFT_FROM);
+  return Math.max(0, d.cap - loadedAt(d,min) + el*0.10);
+}
+
+function stateAt(min){
+  const pos={}, carrying=[];
+  let inFrame=0;
+  WORKERS.forEach(w=>{
+    inFrame++;
+    if(!w.dock){                                   // aisle checker, walks across
+      const u=((min*0.6+w.ph*40)%40)/40;
+      pos[w.id]={x:0.10+0.80*(u<0.5?u*2:2-u*2),y:0.50,carry:false,dock:null};
+      return;
+    }
+    const d=DOCKS[DI[w.dock]];
+    const u=((min/TRIP)+w.ph)%1;                   // one round trip
+    /* 0 .. .42 lane -> truck carrying, .42 .. .5 at truck, .5 .. .92 back empty */
+    let y,carry;
+    if(u<0.42){ y=lerp(0.66,0.26,u/0.42); carry=true; }
+    else if(u<0.52){ y=0.26; carry=true; }
+    else if(u<0.94){ y=lerp(0.26,0.66,(u-0.52)/0.42); carry=false; }
+    else { y=0.66; carry=false; }
+    if(carry) carrying.push(w.id);
+    pos[w.id]={x:d.x+w.ox*0.105,y,carry,dock:w.dock};
+  });
+  const inZone={};DOCKS.forEach(d=>inZone[d.id]=0);
+  WORKERS.forEach(w=>{const p=pos[w.id];if(p.dock&&p.y<0.40) inZone[p.dock]++;});
+  return {pos,carrying,inFrame,inZone,min};
+}
+
+/* cumulative cartons out of the building — it climbs, then visibly flattens
+   the moment Dock 1 finishes and the only crews left are the small ones */
+const SERIES=(function(){const o=[];for(let m=SHIFT_FROM;m<SHIFT_TO;m++)
+  o.push(DOCKS.reduce((a,d)=>a+loadedAt(d,m),0));return o;})();
+
+/* ---------------- projection ---------------- */
+function proj(x,y,W,H){
+  const horizon=H*0.15;
+  const d=Math.pow(y,1.35);
+  return {x:W/2+(x-0.5)*W*0.94*lerp(0.60,1.04,d),
+          y:horizon+(H*0.99-horizon)*d, s:lerp(0.40,1.0,d)};
+}
+const HUD_FOOT=42;
+
+/* ---------------- the shed ---------------- */
+let PLATE=null,PW=0,PH=0;
+function buildPlate(W,H){
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  const g=cv.getContext("2d"), horizon=H*0.15;
+  const air=g.createLinearGradient(0,0,0,H);
+  air.addColorStop(0,"#0b131c");air.addColorStop(.5,"#0d1721");air.addColorStop(1,"#070d14");
+  g.fillStyle=air;g.fillRect(0,0,W,H);
+  g.fillStyle="#101c27";g.fillRect(0,0,W,horizon);
+  g.fillStyle="rgba(120,160,200,.10)";g.fillRect(0,horizon-1,W,1);
+  /* roof trusses, so the back of the shed is a shed */
+  g.strokeStyle="rgba(120,165,210,.09)";g.lineWidth=1;
+  for(let i=0;i<7;i++){g.beginPath();g.moveTo(W*(i/6),0);g.lineTo(W*0.5,horizon*0.86);g.stroke();}
+
+  /* floor: convergence lines only */
+  g.strokeStyle="rgba(90,130,175,.10)";g.lineWidth=1;
+  for(let i=0;i<=8;i++){const a=proj(i/8,0.02,W,H),b=proj(i/8,1,W,H);
+    g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
+  for(let j=1;j<=5;j++){const y=j/5,a=proj(0,y,W,H),b=proj(1,y,W,H);
+    g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
+
+  /* the dock wall: four openings with a truck backed into each */
+  DOCKS.forEach(d=>{
+    const q=proj(d.x,0.26,W,H), k=q.s*1.25, cx=q.x, by=q.y;
+    const dir=d.x<0.5?1:-1, U=k;
+    const prism=(ox,oy,w,ht,dep,t)=>{
+      const x=cx+ox*U,y=by+oy*U,W2=w*U,H2=ht*U,D=dep*U,sh=t||1;
+      g.fillStyle="rgba("+Math.round(26*sh)+","+Math.round(44*sh)+","+Math.round(62*sh)+",.97)";
+      g.fillRect(x-W2/2,y-H2,W2,H2);
+      g.beginPath();g.moveTo(x-W2/2,y-H2);g.lineTo(x+W2/2,y-H2);
+      g.lineTo(x+W2/2+D*dir,y-H2-D*0.5);g.lineTo(x-W2/2+D*dir,y-H2-D*0.5);g.closePath();
+      g.fillStyle="rgba("+Math.round(50*sh)+","+Math.round(79*sh)+","+Math.round(106*sh)+",.97)";g.fill();
+      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=1;
+      g.strokeRect(x-W2/2+.5,y-H2+.5,W2,H2);
+    };
+    /* dock opening in the wall */
+    g.fillStyle="rgba(8,14,20,.95)";
+    g.fillRect(cx-56*U,by-96*U,112*U,96*U);
+    g.strokeStyle="rgba(130,175,215,.26)";g.lineWidth=1.2;
+    g.strokeRect(cx-56*U+.5,by-96*U+.5,112*U,96*U);
+    /* trailer backed in: box body seen end-on, doors open */
+    prism(0,-6,96,78,16,1.06);
+    g.fillStyle="rgba(8,14,20,.92)";g.fillRect(cx-40*U,by-78*U,80*U,66*U);
+    g.strokeStyle="rgba(130,175,215,.18)";g.lineWidth=.8;   // corrugation
+    for(let i=1;i<6;i++){g.beginPath();g.moveTo(cx-40*U,by-78*U+i*11*U);
+      g.lineTo(cx+40*U,by-78*U+i*11*U);g.stroke();}
+    [-1,1].forEach(sd=>{                                     // open rear doors
+      g.fillStyle="rgba(34,54,74,.95)";
+      g.fillRect(cx+sd*48*U-(sd>0?0:10*U),by-80*U,10*U,72*U);
+    });
+    g.fillStyle="rgba(40,62,84,.95)";                        // dock leveller
+    g.fillRect(cx-44*U,by-8*U,88*U,10*U);
+    g.fillStyle="rgba(20,34,47,.9)";                         // bumpers
+    [-52,52].forEach(dx=>g.fillRect(cx+dx*U-4*U,by-16*U,8*U,12*U));
+  });
+  return cv;
+}
+
+/* ---------------- scene ---------------- */
+function drawBox(ctx,x,y,w,h,col,lw){
+  const c=Math.min(7,Math.min(w,h)*0.3);
+  ctx.strokeStyle=col;ctx.lineWidth=lw||1.2;ctx.beginPath();
+  ctx.moveTo(x,y+c);ctx.lineTo(x,y);ctx.lineTo(x+c,y);
+  ctx.moveTo(x+w-c,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+c);
+  ctx.moveTo(x+w,y+h-c);ctx.lineTo(x+w,y+h);ctx.lineTo(x+w-c,y+h);
+  ctx.moveTo(x+c,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+h-c);
+  ctx.stroke();
+}
+
+function drawScene(ctx,W,H,st,min,t,onto){
+  if(!PLATE||PW!==W||PH!==H){PLATE=buildPlate(W,H);PW=W;PH=H;}
+  ctx.clearRect(0,0,W,H);ctx.drawImage(PLATE,0,0);
+  const font=CSSV("--font");
+
+  DOCKS.forEach(d=>{
+    const crew=d.crew, bad=onto&&(crew<ONTOLOGY.minCrew||crew>ONTOLOGY.maxCrew);
+    /* dock lane fence, from the wall down to the stock lane */
+    const q1=proj(d.x-0.097,0.175,W,H),q2=proj(d.x+0.097,0.175,W,H),
+          q3=proj(d.x+0.112,0.76,W,H),q4=proj(d.x-0.112,0.76,W,H);
+    ctx.beginPath();ctx.moveTo(q1.x,q1.y);ctx.lineTo(q2.x,q2.y);
+    ctx.lineTo(q3.x,q3.y);ctx.lineTo(q4.x,q4.y);ctx.closePath();
+    ctx.fillStyle=bad?"rgba(226,82,74,.11)":(crew?"rgba(126,203,255,.05)":"rgba(126,203,255,.02)");
+    ctx.fill();
+    ctx.strokeStyle=bad?"rgba(255,140,132,.92)":(crew?"rgba(110,170,220,.42)":"rgba(90,130,170,.28)");
+    ctx.lineWidth=bad?1.9:1;ctx.setLineDash(crew?[]:[5,5]);ctx.stroke();ctx.setLineDash([]);
+
+
+    /* how full the trailer is — the other half of the same story */
+    (function(){
+      const q=proj(d.x,0.26,W,H), k2=q.s*1.25, cx2=q.x, by2=q.y;
+      const frac=loadedAt(d,min)/d.cap;
+      const x0=cx2-40*k2, y1=by2-12*k2, hMax=66*k2, hh=hMax*frac;
+      if(hh>0.5){
+        ctx.fillStyle=bad&&crew===0?"rgba(226,82,74,.34)":"rgba(150,120,70,.42)";
+        ctx.fillRect(x0,y1-hh,80*k2,hh);
+        ctx.strokeStyle="rgba(170,140,85,.5)";ctx.lineWidth=.8;
+        for(let i=1;i*13*k2<hh;i++){ctx.beginPath();
+          ctx.moveTo(x0,y1-i*13*k2);ctx.lineTo(x0+80*k2,y1-i*13*k2);ctx.stroke();}
+      }
+      ctx.font="700 8.5px "+font;
+      ctx.fillStyle=frac>=1?"#9fd4a8":(crew?"#8aa6bf":"#ff9d96");
+      const pt=Math.round(frac*100)+"%";
+      ctx.fillText(pt,cx2-ctx.measureText(pt).width/2,by2-88*k2);
+    })();
+
+    /* the stock lane: the whole point of the frame. Four stacks, four heights. */
+    const stock=stockAt(d,min), units=Math.round(stock/26);
+    const base=proj(d.x,0.70,W,H), k=base.s;
+    for(let i=0;i<units;i++){
+      const col=i%3, row=Math.floor(i/3);
+      const bx=base.x+(col-1)*26*k, byy=base.y-row*13*k;
+      ctx.fillStyle="rgba(10,17,25,.35)";
+      if(row===0){ctx.beginPath();ctx.ellipse(bx,byy+2,13*k,3.5*k,0,0,7);ctx.fill();}
+      ctx.fillStyle="rgba(150,120,70,.30)";ctx.fillRect(bx-12*k,byy-13*k,24*k,13*k);
+      ctx.strokeStyle="rgba(150,120,70,.50)";ctx.lineWidth=.9;
+      ctx.strokeRect(bx-12*k+.5,byy-13*k+.5,24*k,13*k);
+    }
+    /* the lane is widest at the front, so that is where its name fits */
+    ctx.font="700 10px "+font;
+    ctx.fillStyle=bad?"#ffb4ae":"#8fb6d6";
+    const lbl=d.n.toUpperCase()+" · "+d.lane.toUpperCase()+"  ["+crew+"]";
+    ctx.fillText(lbl,base.x-ctx.measureText(lbl).width/2,base.y+18*k);
+    ctx.font="700 8.5px "+font;ctx.fillStyle="#7e94aa";
+    const sub=Math.round(stock)+" CARTONS IN LANE";
+    ctx.fillText(sub,base.x-ctx.measureText(sub).width/2,base.y+30*k);
+    if(bad){
+      ctx.font="700 8.5px "+font;ctx.fillStyle="#ff9d96";
+      const w2=crew===0?"NO CREW ASSIGNED · TRUCK DUE "+hm(d.due)
+                       :crew+" ON ONE TAIL-LIFT · ONTOLOGY ALLOWS "+ONTOLOGY.maxCrew;
+      ctx.fillText(w2,base.x-ctx.measureText(w2).width/2,base.y+42*k);
+    }
+  });
+
+  /* people, far to near */
+  const list=WORKERS.map(w=>({w,p:st.pos[w.id]})).sort((a,b)=>a.p.y-b.p.y);
+  list.forEach(({w,p})=>{
+    const q=proj(p.x,p.y,W,H), k=q.s;
+    const sway=Math.sin(t*1.6+w.ph*6)*0.8;
+    const torso=46*k, headR=8*k, shoulder=21*k, waist=15*k;
+    const cx=q.x+sway*k, base=q.y, ty=base-torso;
+    ctx.fillStyle="rgba(0,0,0,.3)";
+    ctx.beginPath();ctx.ellipse(cx,base+1.5*k,shoulder*0.6,2.6*k,0,0,7);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx-waist/2,base);ctx.lineTo(cx-shoulder/2,ty+torso*0.24);
+    ctx.quadraticCurveTo(cx-shoulder/2,ty,cx-shoulder*0.3,ty);
+    ctx.lineTo(cx+shoulder*0.3,ty);
+    ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
+    ctx.lineTo(cx+waist/2,base);ctx.closePath();
+    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
+    bg.addColorStop(0,"rgba(176,206,231,.5)");bg.addColorStop(1,"rgba(118,150,182,.36)");
+    ctx.fillStyle=bg;ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx,ty-headR*0.72,headR*0.84,headR,0,0,7);
+    ctx.fillStyle="rgba(192,220,244,.6)";ctx.fill();
+    if(p.carry){                                     // the carton in their hands
+      ctx.fillStyle="rgba(150,120,70,.44)";
+      ctx.fillRect(cx-9*k,ty+torso*0.26,18*k,11*k);
+      ctx.strokeStyle="rgba(170,140,85,.6)";ctx.lineWidth=.9;
+      ctx.strokeRect(cx-9*k+.5,ty+torso*0.26+.5,18*k,11*k);
+    }
+    const bx=cx-shoulder/2-2.5*k, by=ty-headR*1.72-2.5*k, bw=shoulder+5*k, bh=base-by;
+    drawBox(ctx,bx,by,bw,bh,p.carry?"rgba(150,225,255,.92)":"rgba(126,204,255,.82)",1.2);
+    if(k>0.5){
+      ctx.font="600 8.5px "+font;
+      ctx.fillStyle=p.carry?"rgba(190,240,255,.95)":"rgba(196,229,255,.86)";
+      ctx.fillText(w.id+" "+w.conf.toFixed(2),bx,by-4);
+    }
+  });
+
+  ctx.font="700 9px "+font;
+  const line="TRACKING "+WORKERS.length+" IDENTITIES · "+st.inFrame+" IN FRAME · "+
+             st.carrying.length+" CARRYING";
+  const tw=ctx.measureText(line).width;
+  ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,H-HUD_FOOT-16,tw+14,16);
+  ctx.fillStyle="#a8c8e6";ctx.fillText(line,17,H-HUD_FOOT-5);
+}
+
+/* ---------------- shell ---------------- */
+const cv=document.getElementById("cv"), stage=document.getElementById("stage");
+const sparkC=document.getElementById("spark"), track=document.getElementById("track");
+const headEl=document.getElementById("head"), elTime=document.getElementById("tlTime");
+const elTs=document.getElementById("hTs"), elFrame=document.getElementById("sFrame");
+const elCarry=document.getElementById("sCarry"), elTrips=document.getElementById("sTrips");
+const elBig=document.getElementById("rBig"), elSub=document.getElementById("rSub");
+const elDocks=document.getElementById("docks"), elEvents=document.getElementById("events");
+const elNote=document.getElementById("ontoNote"), btnPlay=document.getElementById("btnPlay");
+const btnOnto=document.getElementById("btnOnto"), selSpeed=document.getElementById("speed");
+
+let head=SHIFT_FROM, playing=true, speed=20, onto=true, dragging=false;
+let last=performance.now(), lastMin=-1, sparkedW=0;
+
+function sizeCanvas(c,w,h){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){
+    c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
+  const x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return x;
+}
+function paintSpark(){
+  const w=track.clientWidth,h=track.clientHeight;
+  if(!w||w===sparkedW) return; sparkedW=w;
+  sparkC.style.width=w+"px";sparkC.style.height=h+"px";
+  const g=sizeCanvas(sparkC,w,h);g.clearRect(0,0,w,h);
+  const max=Math.max.apply(null,SERIES)||1;
+  g.beginPath();g.moveTo(0,h);
+  SERIES.forEach((v,i)=>g.lineTo(i/(SERIES.length-1)*w,h-(v/max)*(h-5)-2));
+  g.lineTo(w,h);g.closePath();g.fillStyle="rgba(126,203,255,.18)";g.fill();
+  g.beginPath();
+  SERIES.forEach((v,i)=>{const x=i/(SERIES.length-1)*w,y=h-(v/max)*(h-5)-2;i?g.lineTo(x,y):g.moveTo(x,y);});
+  g.strokeStyle="rgba(150,210,255,.75)";g.lineWidth=1.2;g.stroke();
+}
+function dockRows(st,min){
+  elDocks.innerHTML="";
+  DOCKS.forEach(d=>{
+    const bad=onto&&(d.crew<ONTOLOGY.minCrew||d.crew>ONTOLOGY.maxCrew);
+    const pct=Math.round(loadedAt(d,min)/d.cap*100);
+    const row=document.createElement("div");
+    row.className="drow"+(bad?" breach":"");
+    const sub=onto
+      ? (d.crew<ONTOLOGY.minCrew?"due "+hm(d.due)+" · needs "+ONTOLOGY.minCrew
+         :d.crew>ONTOLOGY.maxCrew?"due "+hm(d.due)+" · max "+ONTOLOGY.maxCrew
+         :"due "+hm(d.due))
+      : d.lane;
+    row.innerHTML='<u><i></i><s>'+d.n+'<small>'+sub+'</small></s></u>'+
+      '<b>'+d.crew+'</b><em>'+tripsAt(d,min)+'</em>'+
+      '<span class="fill"><i style="width:'+pct+'%"></i></span>';
+    elDocks.appendChild(row);
+  });
+}
+function eventRows(min){
+  const out=[];
+  DOCKS.forEach(d=>{
+    for(let pctMark=25;pctMark<=100;pctMark+=25){
+      const need=d.cap*pctMark/100;
+      if(d.crew===0) break;
+      const tAt=SHIFT_FROM+10+need/(d.crew*RATE);
+      if(tAt<=min) out.push({t:Math.round(tAt),flag:false,
+        txt:d.n+" truck "+pctMark+"% loaded · "+Math.round(need)+" cartons"});
+    }
+  });
+  WORKERS.filter(w=>w.dock).slice(0,6).forEach(w=>{
+    const d=DOCKS[DI[w.dock]];
+    const tr=Math.floor((min-SHIFT_FROM-10)/TRIP);
+    if(tr>0) out.push({t:Math.round(SHIFT_FROM+10+tr*TRIP),flag:false,
+      txt:"ID "+w.id+" completed trip "+tr+" to "+d.n});
+  });
+  if(onto){
+    DOCKS.forEach(d=>{
+      if(d.crew<ONTOLOGY.minCrew) out.push({t:SHIFT_FROM+12,flag:true,
+        txt:d.n+(d.crew?" worked by one · ontology requires "+ONTOLOGY.minCrew
+                       :" no crew assigned · truck due "+hm(d.due))});
+      if(d.crew>ONTOLOGY.maxCrew) out.push({t:SHIFT_FROM+12,flag:true,
+        txt:d.n+" crewed by "+d.crew+" · ontology allows "+ONTOLOGY.maxCrew});
+      if(d.crew&&min>d.due&&loadedAt(d,min)<d.cap) out.push({t:d.due,flag:true,
+        txt:d.n+" past its "+hm(d.due)+" slot at "+Math.round(loadedAt(d,min)/d.cap*100)+"% loaded"});
+    });
+  }
+  out.sort((a,b)=>b.t-a.t);
+  elEvents.innerHTML="";
+  out.slice(0,24).forEach(e=>{
+    const li=document.createElement("li");
+    if(e.flag) li.className="flag";
+    li.innerHTML='<u>'+hm(e.t)+'</u><span>'+e.txt+'</span>';
+    elEvents.appendChild(li);
+  });
+}
+function syncOnto(){
+  btnOnto.setAttribute("aria-pressed",String(onto));
+  elNote.innerHTML = onto
+    ? '<b>'+ONTOLOGY.source+'.</b> The crews and the trips are unchanged — the camera '+
+      'counted the same thing either way. The site rule that a dock is never worked '+
+      'alone, and that a trailer has a slot to leave in, is what turns four numbers '+
+      'into three findings.'
+    : '<b>Ontology not loaded.</b> Five people on one tail-lift and nobody on the next '+
+      'is a signal, not a verdict — a full trailer may be deliberate and an empty one '+
+      'may be waiting on stock. Load the site ontology to say which.';
+  elSub.innerHTML = onto
+    ? 'Headcount and tracking, scored against the site ontology.'
+    : 'Headcount and tracking only. <em>No judgement applied.</em>';
+}
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing&&!dragging){head+=speed*dt;if(head>=SHIFT_TO)head=SHIFT_FROM;}
+  const min=Math.floor(head), W=stage.clientWidth, H=stage.clientHeight;
+  const st=stateAt(head);
+  drawScene(sizeCanvas(cv,W,H),W,H,st,min,now/1000,onto);
+  elTime.textContent=hm(head);
+  headEl.style.left=((head-SHIFT_FROM)/(SHIFT_TO-SHIFT_FROM)*100)+"%";
+  paintSpark();
+  if(min!==lastMin){
+    lastMin=min;
+    elTs.textContent=hm(head)+"  14/08/2026";
+    elFrame.textContent=st.inFrame; elCarry.textContent=st.carrying.length;
+    elTrips.textContent=Math.round(DOCKS.reduce((a,d)=>a+d.crew,0)*60/TRIP);
+    elBig.textContent=st.inFrame;
+    dockRows(st,min); eventRows(min);
+  }
+  requestAnimationFrame(frame);
+}
+btnPlay.addEventListener("click",()=>{playing=!playing;btnPlay.textContent=playing?"❚❚":"▶";});
+selSpeed.addEventListener("change",()=>{speed=+selSpeed.value;});
+function scrubTo(cx){const r=track.getBoundingClientRect();
+  head=SHIFT_FROM+clamp((cx-r.left)/r.width,0,1)*(SHIFT_TO-SHIFT_FROM);lastMin=-1;}
+track.addEventListener("pointerdown",e=>{dragging=true;playing=false;btnPlay.textContent="▶";
+  scrubTo(e.clientX);track.setPointerCapture(e.pointerId);});
+track.addEventListener("pointermove",e=>{if(dragging)scrubTo(e.clientX);});
+track.addEventListener("pointerup",()=>{dragging=false;});
+btnOnto.addEventListener("click",()=>{onto=!onto;syncOnto();lastMin=-1;});
+addEventListener("resize",()=>{PLATE=null;sparkedW=0;lastMin=-1;});
+addEventListener("keydown",e=>{
+  if(e.target&&/^(INPUT|SELECT|TEXTAREA|BUTTON|A)$/.test(e.target.tagName))return;
+  if(e.key===" "){e.preventDefault();playing=!playing;btnPlay.textContent=playing?"❚❚":"▶";}
+  if(e.key.toLowerCase()==="o"){onto=!onto;syncOnto();lastMin=-1;}
+});
+syncOnto();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

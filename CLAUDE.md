@@ -612,6 +612,39 @@ workers outside the very fence that was counting them, but only on the shallow f
 where `dy` is small. Both are asserted: sample the shift and check no placement falls
 outside its fence or behind its machine.
 
+## Warehouse, the second vertical (2026-11-13)
+
+`Camera_Intelligence_Warehouse.html` is the scene the meeting described almost
+shot for shot: four trucks, five people loading one of them, two on the next, one
+on the next, nobody on the fourth, and the stock in front of each dock going down
+at four different speeds. The two files link to each other through the vertical
+switcher in the masthead.
+
+**The imbalance is the whole content, and we still do not judge it.** Five on one
+tail-lift and none on the next is a signal — a full trailer may be deliberate and
+an empty one may be waiting on stock. The site ontology (never worked alone, never
+more than four on one lift, a trailer has a departure slot) is what turns four
+numbers into three findings.
+
+**Trips are the cleanest thing tracking sells.** A trip is a lane line crossed and
+re-crossed by the same identity; it needs no timetable, no scan, no declaration.
+
+**The animation clock and the throughput clock are different clocks.** A round trip
+has to *look* like four minutes so there is motion at 20×, but if cartons are
+derived from that cycle a dock fills in an hour and all four end the shift
+identically — which is exactly what happened on the first cut, and it threw the
+story away. Loading rate is now set directly from crew size, tuned so the shift
+ends at 100 / 73 / 44 / 0 per cent. **Assert that the four docks end differently;
+that single check is what protects the point of the file.**
+
+**Put a zone's label where the zone is widest.** In a perspective lane the top is
+narrow, so four dock labels collided into each other up at the wall. They sit at
+the front now, beside their own stock.
+
+**Anything time-dependent belongs in the scene, not the cached plate.** The trailer
+shells are in the plate; how full each one is gets drawn per frame, which is what
+makes one trailer visibly full and another visibly empty above the biggest pile.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

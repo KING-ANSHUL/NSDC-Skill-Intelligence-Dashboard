@@ -49,10 +49,10 @@ body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--font
 .mast h1{margin:0;font-size:14.5px;font-weight:670;letter-spacing:-.01em;white-space:nowrap}
 .mast h1 span{color:var(--muted);font-weight:500}
 .vsel{display:flex;gap:2px;background:#eef1f5;border-radius:var(--r-ctl);padding:2px}
-.vsel button{font-family:inherit;font-size:11px;font-weight:650;letter-spacing:.02em;
+.vsel a,.vsel button{text-decoration:none;display:inline-block;line-height:22px;font-family:inherit;font-size:11px;font-weight:650;letter-spacing:.02em;
   border:0;background:none;color:var(--ink-2);padding:0 11px;height:22px;
   border-radius:var(--r-ctl);cursor:pointer}
-.vsel button[aria-pressed=true]{background:var(--surface);color:var(--ink);
+.vsel [aria-pressed=true]{background:var(--surface);color:var(--ink);
   box-shadow:0 1px 2px rgba(16,32,48,.14)}
 .vsel button:disabled{opacity:.42;cursor:not-allowed}
 .mast-r{margin-left:auto;display:flex;align-items:center;gap:10px}
@@ -203,7 +203,7 @@ body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--font
     <h1>Camera Intelligence <span>· Manufacturing Floor</span></h1>
     <nav class="vsel" aria-label="Vertical">
       <button aria-pressed="true">Manufacturing</button>
-      <button disabled title="Next build">Warehouse</button>
+      <a href="Camera_Intelligence_Warehouse.html">Warehouse</a>
     </nav>
     <div class="mast-r">
       <span class="synth">Synthetic scene · illustrative</span>

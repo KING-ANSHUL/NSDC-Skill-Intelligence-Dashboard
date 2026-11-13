@@ -540,6 +540,56 @@ Still there, deliberately: in a narrow drawer the back row of desk numbers sits
 behind the chip row. The chips are semi-opaque and it reads fine; fixing it properly
 means reworking the scene's perspective, which is not worth it for a mockup.
 
+## A second vertical, and a rule the NSDC file does not have (2026-11-13)
+
+`Camera_Intelligence_Mockups.html` is a **new, separate deliverable** — do not fold it
+into the NSDC dashboard. It came out of the 13 Nov business meeting: the classroom is
+one frame, and the pitch now needs high-value verticals built from the same model.
+Manufacturing is built; warehouse is next, then ports (whose camera use case the
+meeting never actually settled — spillage was raised and then withdrawn, because port
+containers arrive sealed by customs).
+
+**The model is four layers, and only the first three are ours.** Skills (two are live:
+**headcount** and **tracking**) produce signals; signals carry KPIs; and an **ontology**
+— the client's own statement of what their entities are and what they may do — turns
+signals into findings. The ontology is plug-and-play and changes per sector and per
+company. A plant that lets anyone spray simply does not ship the certification rule.
+
+**The rule that governs this file: we report signals, not verdicts.** One person on a
+machine and five on the next is a signal; which is better is the industry's call. This
+is the opposite of the NSDC dashboard, which scores everything against references, and
+the difference is deliberate — do not "fix" one to match the other. Concretely:
+
+- With the ontology off there is **not one red or green pixel**, and the language is
+  camera-only. A person standing at the paint booth reads "At machine", because without
+  a skill matrix the camera cannot know the booth is the wrong machine for them.
+- With it on, the **counts do not change** — only the verdict appears. The on-screen
+  note says exactly that, because it is the whole argument.
+- The file opens with the ontology **loaded**, so a screenshot shows findings; toggling
+  it off (the switch, or `O`) is how you make the architectural point live.
+
+**Zone counts must match what is inside the fence.** A worker mid-walk belongs to no
+hub, so they are counted in frame and in transit but in neither zone, and the event log
+says "left Hub 2" at departure and "entered Hub 4" on arrival rather than one "moved"
+line. The first cut counted them at the destination and the zone label disagreed with
+what was visibly inside the polygon — the first thing anyone checks.
+
+**The invariant to re-run after any change here:** across the shift, zone counts plus
+in-transit must equal in-frame, the pre-computed scrubber series must equal `inFrame` at
+every minute, and toggling the ontology must change no count. All three are cheap to
+assert in one `evaluate`.
+
+**The floater (ID 120)** is the one identity that moves between machines and does a
+different job at each, and its timeline is **scripted, not random** — a story you cannot
+repeat is not a story you can present. Its states (at machine / stationary / at a
+machine off its matrix / walked away from a running machine) are signals; the red mark
+on it comes from `ONTOLOGY.worker`, same as everything else.
+
+**Machines are drawn as solids, not rectangles.** `prism()` gives a front, a top and one
+side face; flat rects read as placeholders, which is what they were in the first cut.
+Floor lane markings stay in the blue family on purpose — yellow floor paint reads as an
+amber warning, and judgement has exactly one channel.
+
 ## Working on this project
 
 - No build step — edit the HTML directly, then reload in the browser (`preview_start` with the `dashboard` launch config, or open the file directly).

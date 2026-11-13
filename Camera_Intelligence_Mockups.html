@@ -1,0 +1,1107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Camera Intelligence — Manufacturing Floor</title>
+<style>
+/* ============================================================
+   CAMERA INTELLIGENCE · VERTICAL MOCKUPS
+   The dashboard shows what the MODEL sees, not what an eye sees.
+   That is why the plane is dark and the figures are wireframe: this is
+   the machine's perspective, and the aesthetic is the argument.
+
+   Two skills are live in the model — HEADCOUNT and TRACKING. Everything
+   on screen is derived from those two and nothing else.
+
+   The hard rule this file is built on: we report SIGNALS, not verdicts.
+   How many people are at a hub is a signal. Whether that is good or bad
+   is the industry's call, and it arrives as an ONTOLOGY the client plugs
+   in. With the ontology off, there is not a single red or green pixel.
+   ============================================================ */
+:root{
+  --font:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  --paper:#f6f7f9; --surface:#fff; --ink:#0e1720; --ink-2:#3d4e5e; --muted:#6b7f91;
+  --rule:#d8dfe6; --hair:#e7ecf1; --accent:#1f6fd0;
+
+  /* the dark plane — the camera's own surface */
+  --vid:#0a0f16; --vid-2:#111b26; --vid-ink:#dfe8f2; --vid-muted:#7e94aa;
+  --vid-line:#1e2b39;
+
+  /* NEUTRAL channel: signals. Magnitude and category only, never judgement. */
+  --sig:#7ecbff; --sig-dim:#4e7fa6; --sig-hot:#b9e4ff;
+
+  /* JUDGEMENT channel: only ever painted when an ontology is loaded and a
+     rule in it is broken. Off by default, deliberately. */
+  --good:#0cbe6e; --warn:#e8a33c; --crit:#e2524a;
+
+  --r-ctl:999px; --h-ctl:26px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:13px/1.45 var(--font);
+  -webkit-font-smoothing:antialiased;overflow:hidden}
+.app{height:100%;display:flex;flex-direction:column;min-height:0}
+
+/* ---------- masthead ---------- */
+.mast{display:flex;align-items:center;gap:14px;padding:9px 18px;background:var(--surface);
+  border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.mast h1{margin:0;font-size:14.5px;font-weight:670;letter-spacing:-.01em;white-space:nowrap}
+.mast h1 span{color:var(--muted);font-weight:500}
+.vsel{display:flex;gap:2px;background:#eef1f5;border-radius:var(--r-ctl);padding:2px}
+.vsel button{font-family:inherit;font-size:11px;font-weight:650;letter-spacing:.02em;
+  border:0;background:none;color:var(--ink-2);padding:0 11px;height:22px;
+  border-radius:var(--r-ctl);cursor:pointer}
+.vsel button[aria-pressed=true]{background:var(--surface);color:var(--ink);
+  box-shadow:0 1px 2px rgba(16,32,48,.14)}
+.vsel button:disabled{opacity:.42;cursor:not-allowed}
+.mast-r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.skills{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--muted);font-weight:650}
+.skills i{display:inline-flex;align-items:center;gap:4px;font-style:normal;
+  color:var(--ink-2);background:#eef4fa;border:1px solid #d6e4f1;
+  border-radius:var(--r-ctl);padding:2px 8px;font-size:10px;letter-spacing:.06em}
+.skills i b{width:5px;height:5px;border-radius:50%;background:var(--accent);font-weight:400}
+.synth{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:#8a6a1f;
+  background:#fdf4de;border:1px solid #efdfae;border-radius:2px;padding:3px 8px;font-weight:650}
+
+/* the one control that changes what the product claims */
+.onto{display:flex;align-items:center;gap:8px;height:var(--h-ctl);padding:0 12px;
+  border:1px solid var(--rule);border-radius:var(--r-ctl);background:var(--surface);
+  font-family:inherit;font-size:11px;font-weight:650;color:var(--ink-2);cursor:pointer}
+.onto:hover{border-color:var(--accent);color:var(--accent)}
+.onto .sw{width:26px;height:14px;border-radius:999px;background:#cdd6df;position:relative;
+  transition:background .16s ease;flex:none}
+.onto .sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;
+  border-radius:50%;background:#fff;transition:transform .16s ease;
+  box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.onto[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:#f2f8ff}
+.onto[aria-pressed=true] .sw{background:var(--accent)}
+.onto[aria-pressed=true] .sw::after{transform:translateX(12px)}
+
+/* ---------- console ---------- */
+.console{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,2.05fr) minmax(0,1fr);
+  background:var(--vid);border-top:1px solid var(--vid-line)}
+.left{display:flex;flex-direction:column;min-width:0;min-height:0;
+  border-right:1px solid var(--vid-line)}
+.stage{position:relative;flex:1;min-height:0;background:var(--vid)}
+.stage canvas{display:block;width:100%;height:100%}
+
+/* HUD is DOM over the canvas — crisper type, and it lays out properly */
+.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud-tl,.hud-tr,.hud-bl,.hud-br{position:absolute;display:flex;align-items:center;gap:8px}
+.hud-tl{top:11px;left:12px}.hud-tr{top:11px;right:12px}
+.hud-bl{bottom:11px;left:12px}.hud-br{bottom:11px;right:12px}
+.hud-id{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--vid-ink);text-transform:uppercase}
+.hud-room{font-size:10.5px;letter-spacing:.06em;color:var(--vid-muted);text-transform:uppercase}
+.hud-ts{font-size:10.5px;color:var(--vid-ink);letter-spacing:.04em}
+/* a replay of a recorded window must not wear live-camera grammar */
+.rec{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;
+  letter-spacing:.11em;color:#9fc4e6}
+.rec b{width:6px;height:6px;border-radius:50%;background:#7aa7d4}
+.hud-stat{display:flex;align-items:center;gap:6px;background:rgba(6,11,17,.74);
+  border:1px solid #22303f;padding:4px 8px;border-radius:2px}
+.hud-stat u{text-decoration:none;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--vid-muted);font-weight:650}
+.hud-stat s{text-decoration:none;font-size:12px;font-weight:680;color:var(--vid-ink)}
+
+/* ---------- transport ---------- */
+.tl{display:flex;align-items:center;gap:10px;padding:9px 12px 7px;
+  border-top:1px solid var(--vid-line);background:#080d13;flex:none}
+.tl-btn{font-family:inherit;font-size:10px;line-height:1;color:var(--vid-ink);
+  background:#16232f;border:1px solid #273747;border-radius:2px;width:30px;height:24px;cursor:pointer}
+.tl-btn:hover{border-color:#3d5570}
+.tl-time{font-size:11.5px;font-weight:680;color:var(--vid-ink);min-width:46px;
+  font-variant-numeric:tabular-nums}
+.tl-track{position:relative;flex:1;height:34px;background:#0c141d;border:1px solid #1b2733;
+  border-radius:2px;cursor:pointer;min-width:0}
+.tl-spark{position:absolute;inset:0;width:100%;height:100%}
+.tl-head{position:absolute;top:-3px;bottom:-3px;width:2px;background:#e8f2fb;
+  box-shadow:0 0 0 1px rgba(8,14,20,.8);pointer-events:none}
+.tl-ax{display:flex;justify-content:space-between;font-size:10px;color:var(--vid-muted);
+  letter-spacing:.06em;padding:3px 2px 0;font-variant-numeric:tabular-nums}
+.tl-speed{font-family:inherit;font-size:10px;padding:4px 5px;background:#16232f;
+  color:var(--vid-ink);border:1px solid #273747;border-radius:2px}
+
+/* ---------- rail ---------- */
+.rail{display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--vid)}
+.rail-h{padding:11px 14px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--vid-muted);font-weight:650}
+.rail-big{padding:2px 14px 0;display:flex;align-items:baseline;gap:7px}
+.rail-big b{font-size:30px;font-weight:680;letter-spacing:-.025em;color:var(--vid-ink);
+  font-variant-numeric:tabular-nums}
+.rail-big span{font-size:11.5px;color:var(--vid-muted)}
+.rail-sub{padding:3px 14px 10px;font-size:11px;color:var(--vid-muted);
+  border-bottom:1px solid var(--vid-line)}
+.rail-sub em{font-style:normal;color:#9fc4e6}
+
+.zh{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:8px 14px 5px;
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--vid-muted);font-weight:650}
+.zrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+  padding:6px 14px;border-bottom:1px solid #141f2b;font-size:12px;color:var(--vid-ink)}
+.zrow:last-of-type{border-bottom:0}
+.zrow u{text-decoration:none;display:flex;align-items:center;gap:7px;min-width:0}
+.zrow u i{width:7px;height:7px;border-radius:1px;background:var(--sig-dim);flex:none}
+.zrow u s{text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zrow u s small{display:block;font-size:9.5px;color:var(--vid-muted);letter-spacing:.04em}
+.zrow b{font-variant-numeric:tabular-nums;font-weight:680;min-width:22px;text-align:right}
+.zrow em{font-style:normal;font-size:10.5px;color:var(--vid-muted);
+  font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+/* judgement, and only from the ontology */
+.zrow.breach{background:rgba(226,82,74,.10)}
+.zrow.breach u i{background:var(--crit)}
+.zrow.breach b{color:#ff9d96}
+.zrow.breach em{color:#ffb4ae}
+.zrow .cap{font-size:10px;color:var(--vid-muted)}
+
+.evwrap{flex:1;min-height:0;display:flex;flex-direction:column;border-top:1px solid var(--vid-line)}
+.evwrap h4{margin:0;padding:10px 14px 6px;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--vid-muted);font-weight:650}
+.evlist{margin:0;padding:0 14px 10px;list-style:none;overflow-y:auto;flex:1;min-height:0}
+.evlist li{display:grid;grid-template-columns:44px 1fr;gap:9px;padding:4px 0;
+  border-bottom:1px solid #141f2b;font-size:11.5px;color:var(--vid-ink)}
+.evlist li:last-child{border-bottom:0}
+.evlist li u{text-decoration:none;color:var(--vid-muted);font-variant-numeric:tabular-nums}
+.evlist li.flag{color:#ffb4ae}
+.evlist .none{color:var(--vid-muted);padding:6px 0;border:0}
+
+/* the floater block: one identity, its current job, and its whole shift */
+.fl{padding:10px 14px;border-top:1px solid var(--vid-line)}
+.fl-h{display:flex;align-items:center;gap:8px;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--vid-muted);font-weight:650}
+.fl-h b{color:var(--vid-ink);font-size:11.5px;letter-spacing:.01em;
+  text-transform:none;font-weight:660}
+.fl-now{display:flex;align-items:baseline;gap:8px;margin-top:5px}
+.fl-now s{text-decoration:none;font-size:13.5px;font-weight:660;color:var(--vid-ink)}
+.fl-now em{font-style:normal;font-size:11px;color:var(--vid-muted)}
+.fl.bad .fl-now s{color:#ff9d96}
+.fl-why{margin-top:4px;font-size:11px;line-height:1.45;color:#ffb4ae;display:none}
+.fl.bad .fl-why{display:block}
+.fl-strip{position:relative;display:flex;gap:1px;height:13px;margin-top:9px;
+  border-radius:2px;overflow:hidden;background:#101a24}
+.fl-strip i{flex:1 1 0;background:#2b3f52}
+.fl-strip i.m{background:#19242f}
+.fl-strip i.s{background:#3f5e78}
+.fl-strip i.bad{background:var(--crit)}
+.fl-head{position:absolute;top:-2px;bottom:-2px;width:2px;background:#e8f2fb;
+  box-shadow:0 0 0 1px rgba(8,14,20,.8)}
+.fl-ax{display:flex;justify-content:space-between;font-size:9.5px;
+  color:var(--vid-muted);margin-top:4px;letter-spacing:.05em}
+.onto-note{padding:9px 14px;font-size:11px;line-height:1.5;color:var(--vid-muted);
+  border-top:1px solid var(--vid-line);background:#080d13}
+.onto-note b{color:#9fc4e6;font-weight:650}
+
+@media(max-width:1080px){
+  .console{grid-template-columns:1fr;grid-template-rows:minmax(0,1.3fr) minmax(0,1fr)}
+  .left{border-right:0;border-bottom:1px solid var(--vid-line)}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="mast">
+    <h1>Camera Intelligence <span>· Manufacturing Floor</span></h1>
+    <nav class="vsel" aria-label="Vertical">
+      <button aria-pressed="true">Manufacturing</button>
+      <button disabled title="Next build">Warehouse</button>
+    </nav>
+    <div class="mast-r">
+      <span class="synth">Synthetic scene · illustrative</span>
+      <span class="skills">Skills live
+        <i><b></b>Headcount</i><i><b></b>Tracking</i>
+      </span>
+      <button class="onto" id="btnOnto" aria-pressed="false">
+        <span class="sw"></span>Ontology
+      </button>
+    </div>
+  </header>
+
+  <div class="console">
+    <div class="left">
+      <div class="stage" id="stage">
+        <canvas id="cv"></canvas>
+        <div class="hud">
+          <div class="hud-tl"><span class="hud-id" id="hId">CAM-11</span>
+            <span class="hud-room">· Bay 2 · Press &amp; Assembly</span></div>
+          <div class="hud-tr"><span class="rec"><b></b>REPLAY</span>
+            <span class="hud-ts" id="hTs">—</span></div>
+          <div class="hud-bl">
+            <span class="hud-stat"><u>In frame</u><s id="sFrame">—</s></span>
+            <span class="hud-stat"><u>Tracked</u><s id="sTrack">—</s></span>
+            <span class="hud-stat"><u>In transit</u><s id="sMove">—</s></span>
+          </div>
+          <div class="hud-br"><span class="hud-stat"><u>Zones</u><s id="sZone">6</s></span></div>
+        </div>
+      </div>
+      <div class="tl">
+        <button class="tl-btn" id="btnPlay" aria-label="Play or pause">❚❚</button>
+        <span class="tl-time" id="tlTime">06:00</span>
+        <div class="tl-track" id="track" role="slider" tabindex="0"
+             aria-label="Scrub the recorded shift" aria-valuemin="360" aria-valuemax="1080">
+          <canvas class="tl-spark" id="spark"></canvas>
+          <i class="tl-head" id="head"></i>
+        </div>
+        <select class="tl-speed" id="speed" aria-label="Playback speed">
+          <option value="4">4×</option><option value="8">8×</option>
+          <option value="20" selected>20×</option><option value="60">60×</option>
+        </select>
+      </div>
+      <div class="tl-ax" style="padding:0 12px 8px"><span>06:00</span><span>12:00</span><span>18:00</span></div>
+    </div>
+
+    <aside class="rail">
+      <div class="rail-h">Workers in frame · at this minute</div>
+      <div class="rail-big"><b id="rBig">—</b><span>people</span></div>
+      <div class="rail-sub" id="rSub">Headcount and tracking only. <em>No judgement applied.</em></div>
+
+      <div class="zh"><span>Zone</span><span>Now</span><span>Dwell</span></div>
+      <div id="zones"></div>
+      <div class="fl" id="fl"></div>
+
+      <div class="evwrap">
+        <h4>Detections at or before this minute</h4>
+        <ul class="evlist" id="events"></ul>
+      </div>
+      <div class="onto-note" id="ontoNote">
+        <b>Ontology not loaded.</b> The floor is reporting signals only — who is where,
+        for how long. What counts as too many or too few at a hub is the plant's own
+        rule, not ours. Load an ontology to turn these counts into findings.
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   1 · DETERMINISTIC RNG — the same floor every time it is opened
+   ================================================================ */
+function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function rng(seed){let a=seed>>>0;return function(){a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};}
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const lerp=(a,b,t)=>a+(b-a)*t;
+const hm=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(Math.floor(m%60)).padStart(2,"0");
+const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ================================================================
+   2 · THE FLOOR — six hubs, laid out so the near row carries the
+   crowded one. Depth costs legibility, and the crowded hub is the
+   whole point of the frame.
+   ================================================================ */
+const SHIFT_FROM=6*60, SHIFT_TO=18*60;           // 06:00 – 18:00
+
+const HUBS=[
+  {id:"H1",n:"Hub 1",m:"Hydraulic Press", x:.165,y:.27,dx:.125,dy:.115,base:2,kind:"press"},
+  {id:"H2",n:"Hub 2",m:"CNC Line",        x:.50, y:.25,dx:.135,dy:.115,base:4,kind:"cnc"},
+  {id:"H3",n:"Hub 3",m:"Assembly Bench",  x:.835,y:.27,dx:.125,dy:.115,base:2,kind:"bench"},
+  {id:"H4",n:"Hub 4",m:"Paint Booth",     x:.165,y:.70,dx:.145,dy:.145,base:6,kind:"booth"},
+  {id:"H5",n:"Hub 5",m:"Packing Line",    x:.50, y:.745,dx:.155,dy:.145,base:3,kind:"pack"},
+  {id:"H6",n:"Hub 6",m:"QC Station",      x:.835,y:.70,dx:.145,dy:.145,base:1,kind:"qc"}
+];
+const HUBI={};HUBS.forEach((h,i)=>HUBI[h.id]=i);
+
+/* The ontology is NOT ours. It is what the plant declares about its own
+   floor — how many people a machine admits, which hub may never be empty.
+   Plugging a different plant's ontology in changes every finding below
+   without touching a single signal. */
+const ONTOLOGY={
+  source:"Plant ontology · Bay 2 · supplied by operator",
+  rules:{
+    H1:{max:2,  label:"2 operators max · two-hand control"},
+    H2:{max:4,  label:"4 max · one per spindle"},
+    H3:{max:4,  label:"4 max · bench length"},
+    H4:{max:3,  label:"3 max · extraction rated for 3"},
+    H5:{max:6,  label:"6 max · belt length"},
+    H6:{min:1,  label:"never unmanned · QC gate"}
+  },
+  /* rules about a person rather than a place. Same plug: a plant that lets
+     anyone spray would simply not ship the certification rule. */
+  worker:{
+    idleMax:10,
+    uncertified:{H4:"the Paint Booth"},
+    noWalkAway:{H2:"the CNC in cycle"}
+  }
+};
+
+/* ---- workers: stable identities, which is what TRACKING buys you ---- */
+const R=rng(hashStr("bay-2-shift"));
+const WORKERS=[];
+(function(){
+  let n=101;
+  HUBS.forEach(h=>{
+    for(let i=0;i<h.base;i++){
+      WORKERS.push({id:n++,home:h.id,conf:0.86+R()*0.12,ph:R()*6.28,
+                    ox:(R()-0.5),oy:(R()-0.5)});
+    }
+  });
+})();
+
+/* ---- movements: the shift as a list of events, not as a curve.
+   Counts are DERIVED from where each identity is, so the headcount, the
+   per-zone rail and the event log can never disagree with each other. ---- */
+const MOVES=[];
+(function(){
+  const r=rng(hashStr("moves-bay-2"));
+  const ids=WORKERS.map(w=>w.id);
+  let t=SHIFT_FROM+14;
+  const at={};WORKERS.forEach(w=>at[w.id]=w.home);
+  while(t<SHIFT_TO-18){
+    const id=ids[Math.floor(r()*ids.length)];
+    const from=at[id];
+    let to;
+    const roll=r();
+    if(from===null){ to=WORKERS.find(w=>w.id===id).home; }       // back from a break
+    else if(roll<0.26){ to=null; }                                // steps out of frame
+    else {
+      const cand=HUBS.filter(h=>h.id!==from);
+      to=cand[Math.floor(r()*cand.length)].id;
+    }
+    MOVES.push({t:Math.round(t),id,from,to});
+    at[id]=to;
+    t+=5+r()*11;
+  }
+  /* QC is a one-person gate: make sure it is briefly abandoned twice, which
+     is the kind of thing only an ontology can call a problem */
+  [9*60+40, 15*60+5].forEach(tt=>{
+    const w=WORKERS.find(x=>x.home==="H6");
+    MOVES.push({t:tt,id:w.id,from:"H6",to:null});
+    MOVES.push({t:tt+22,id:w.id,from:null,to:"H6"});
+  });
+  MOVES.sort((a,b)=>a.t-b.t);
+})();
+
+const TRANSIT=4;                                  // minutes a walk takes on screen
+
+/* ---- the floater: ID 120, multi-skill, no fixed station ----
+   Scripted segment by segment. A random walk would produce a different story
+   on every run, and a story you cannot repeat is not a story you can present. */
+const FLOATER={id:120,name:"Floater · multi-skill",conf:0.93};
+const TASK={H1:"Press operation",H2:"CNC tending",H3:"Sub-assembly",
+            H4:"Spray finishing",H5:"Carton packing",H6:"Dimensional check"};
+const FL_SEG=[
+  {t:360, hub:"H3", st:"work"},
+  {t:398, hub:null,from:"H3",to:"H5",st:"move"},
+  {t:406, hub:"H5", st:"work"},
+  {t:452, hub:"H5", st:"idle"},                  /* stood at the belt, no task */
+  {t:470, hub:null,from:"H5",to:"H2",st:"move"},
+  {t:478, hub:"H2", st:"work"},
+  {t:536, hub:null,from:"H2",to:"H6",st:"abandon"},/* walked off a running CNC */
+  {t:544, hub:"H6", st:"work"},
+  {t:600, hub:null,from:"H6",to:"H4",st:"move"},
+  {t:608, hub:"H4", st:"uncert"},                /* booth is not on their matrix */
+  {t:646, hub:null,from:"H4",to:"H5",st:"move"},
+  {t:654, hub:"H5", st:"work"},
+  {t:726, hub:"H5", st:"idle"},
+  {t:748, hub:null,from:"H5",to:"H3",st:"move"},
+  {t:756, hub:"H3", st:"work"},
+  {t:838, hub:null,from:"H3",to:"H2",st:"move"},
+  {t:846, hub:"H2", st:"work"},
+  {t:902, hub:null,from:"H2",to:"H6",st:"abandon"},
+  {t:910, hub:"H6", st:"work"},
+  {t:968, hub:"H6", st:"idle"},
+  {t:990, hub:null,from:"H6",to:"H4",st:"move"},
+  {t:998, hub:"H4", st:"uncert"},
+  {t:1040,hub:null,from:"H4",to:"H3",st:"move"},
+  {t:1048,hub:"H3", st:"work"},
+  {t:SHIFT_TO,hub:"H3",st:"work"}
+];
+/* what the camera alone can say */
+const FL_LABEL={work:"At machine",idle:"Stationary",uncert:"At machine",
+                abandon:"Walking",move:"Walking"};
+/* what the same state becomes once the plant's rules are loaded */
+const FL_LABEL_O={work:"At machine",idle:"Idle at station",
+                  uncert:"At uncertified machine",abandon:"Machine left running",
+                  move:"Walking"};
+const flLabel=(k,o)=>(o?FL_LABEL_O:FL_LABEL)[k];
+/* the rule, not the reading. Swap the ontology and these sentences change. */
+function flViolation(seg,dur){
+  const W0=ONTOLOGY.worker;
+  /* standing still is not yet a fault — the ontology says how long is too long */
+  if(seg.st==="idle")
+    return dur>W0.idleMax
+      ? "Idle "+Math.round(dur)+" min at a station — ontology allows "+W0.idleMax
+      : null;
+  if(seg.st==="uncert")
+    return "Not certified for "+(W0.uncertified[seg.hub]||"this machine")+" — skill matrix";
+  if(seg.st==="abandon")
+    return "Walked away from "+(W0.noWalkAway[seg.from]||"a running machine");
+  return null;
+}
+function floaterAt(min){
+  let i=0;
+  while(i+1<FL_SEG.length && FL_SEG[i+1].t<=min) i++;
+  const seg=FL_SEG[i], nxt=FL_SEG[i+1]||{t:SHIFT_TO};
+  const dur=min-seg.t, span=Math.max(1,nxt.t-seg.t);
+  const moving=seg.st==="move"||seg.st==="abandon"
+    ? {from:seg.from,to:seg.to,p:Math.min(1,dur/span)} : null;
+  const hub=seg.hub||(moving?seg.to:null);
+  return {seg,hub,moving,dur,since:seg.t,
+          task:seg.hub?TASK[seg.hub]:"In transit",
+          state:seg.st,
+          viol:flViolation(seg,dur)};
+}
+
+/* fold the move list up to a minute → who is where, and who is mid-walk */
+function stateAt(min){
+  const at={};WORKERS.forEach(w=>at[w.id]=w.home);
+  const since={};WORKERS.forEach(w=>since[w.id]=SHIFT_FROM);
+  const transit=[], moving={};
+  for(const mv of MOVES){
+    if(mv.t>min) break;
+    at[mv.id]=mv.to; since[mv.id]=mv.t;
+    if(min-mv.t<TRANSIT && mv.from && mv.to){
+      transit.push({id:mv.id,from:mv.from,to:mv.to,p:(min-mv.t)/TRANSIT});
+      moving[mv.id]=1;
+    }
+  }
+  const counts={};HUBS.forEach(h=>counts[h.id]=0);
+  let inFrame=0;
+  /* in frame counts everyone the camera can see; a zone counts only who is
+     actually inside its fence, so someone mid-walk belongs to neither hub */
+  WORKERS.forEach(w=>{const z=at[w.id];if(z){inFrame++;if(!moving[w.id])counts[z]++;}});
+  const dwell={};HUBS.forEach(h=>{
+    let oldest=min;
+    WORKERS.forEach(w=>{if(at[w.id]===h.id&&!moving[w.id]&&since[w.id]<oldest)
+      oldest=since[w.id];});
+    dwell[h.id]=counts[h.id]?min-oldest:0;
+  });
+  /* the floater is one more identity the camera is holding: always in frame,
+     inside a fence only when it is actually standing in one */
+  const fl=floaterAt(min);
+  inFrame++;
+  if(fl.moving) transit.push({id:FLOATER.id,from:fl.moving.from,to:fl.moving.to,
+                              p:fl.moving.p,fl:true});
+  else if(fl.hub) counts[fl.hub]++;
+  return {at,since,counts,inFrame,transit,moving,dwell,fl};
+}
+
+/* total-in-frame per minute, precomputed once for the scrubber */
+const SERIES=(function(){
+  const out=[];const at={};WORKERS.forEach(w=>at[w.id]=w.home);
+  let i=0,n=WORKERS.length;
+  for(let m=SHIFT_FROM;m<SHIFT_TO;m++){
+    while(i<MOVES.length&&MOVES[i].t<=m){
+      const mv=MOVES[i];if(at[mv.id]&&!mv.to)n--;if(!at[mv.id]&&mv.to)n++;
+      at[mv.id]=mv.to;i++;}
+    out.push(n+1);          // +1: the floater is always in frame
+  }
+  return out;
+})();
+
+/* ================================================================
+   3 · PROJECTION — one camera, mounted high at the back of the bay
+   ================================================================ */
+function proj(x,y,W,H){
+  const horizon=H*0.16;
+  const d=Math.pow(y,1.35);
+  const scale=lerp(0.42,1.0,d);
+  const cy=horizon+(H*0.99-horizon)*d;
+  const cx=W/2+(x-0.5)*W*0.94*lerp(0.62,1.02,d);
+  return {x:cx,y:cy,s:scale};
+}
+/* the HTML chip row sits over the bottom of the canvas; anything the
+   canvas paints down there has to clear it */
+const HUD_FOOT=42;
+
+/* ================================================================
+   4 · THE PLATE — bay shell and machines, cached per size
+   ================================================================ */
+let PLATE=null,PW=0,PH=0;
+function buildPlate(W,H){
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+  const g=cv.getContext("2d");
+  const horizon=H*0.17, r=rng(hashStr("plate"));
+
+  const air=g.createLinearGradient(0,0,0,H);
+  air.addColorStop(0,"#0b131c");air.addColorStop(.5,"#0d1721");air.addColorStop(1,"#070d14");
+  g.fillStyle=air;g.fillRect(0,0,W,H);
+
+  /* back wall: roller shutter, racking, overhead gantry rail */
+  g.fillStyle="#111e2a";g.fillRect(0,0,W,horizon);
+  g.fillStyle="rgba(120,160,200,.10)";g.fillRect(0,horizon-1,W,1);
+  const shx=W*0.06,shw=W*0.17,shy=horizon*0.26,shh=horizon*0.62;
+  g.fillStyle="#16242f";g.fillRect(shx,shy,shw,shh);
+  g.strokeStyle="rgba(130,175,215,.20)";g.lineWidth=1;g.strokeRect(shx+.5,shy+.5,shw,shh);
+  for(let i=0;i<7;i++){g.fillStyle="rgba(130,175,215,.10)";
+    g.fillRect(shx+2,shy+shh*(i/7)+2,shw-4,shh/7*0.46);}
+  for(let k=0;k<3;k++){            // pallet racking
+    const bx=W*(0.33+k*0.145),bw=W*0.115,by=horizon*0.22,bh=horizon*0.66;
+    g.fillStyle="#14212c";g.fillRect(bx,by,bw,bh);
+    g.strokeStyle="rgba(130,175,215,.18)";g.strokeRect(bx+.5,by+.5,bw,bh);
+    for(let i=0;i<3;i++){g.fillStyle="rgba(150,120,70,.26)";
+      g.fillRect(bx+3,by+bh*(0.12+i*0.30),bw-6,bh*0.18);}
+  }
+  /* overhead gantry: a rail with two hangers. Drawn as a solid block it reads
+     as a stray rectangle floating next to the REPLAY badge, not as structure. */
+  const gy=horizon*0.22;
+  g.fillStyle="rgba(150,190,220,.16)";g.fillRect(W*0.74,gy,W*0.22,2.5);
+  g.fillStyle="rgba(150,190,220,.10)";
+  g.fillRect(W*0.785,gy-horizon*0.13,2,horizon*0.13);
+  g.fillRect(W*0.915,gy-horizon*0.13,2,horizon*0.13);
+  g.fillRect(W*0.845,gy+2.5,W*0.022,horizon*0.07);     // hoist block
+  g.fillStyle="rgba(150,190,220,.07)";g.fillRect(0,horizon*0.06,W,horizon*0.04);
+
+  /* floor: convergence lines only — a checkerboard reads as an architectural
+     render, which is the opposite of a camera frame */
+  g.strokeStyle="rgba(90,130,175,.10)";g.lineWidth=1;
+  for(let i=0;i<=8;i++){const a=proj(i/8,0.02,W,H),b=proj(i/8,1,W,H);
+    g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
+  for(let j=1;j<=5;j++){const y=j/5,a=proj(0,y,W,H),b=proj(1,y,W,H);
+    g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();}
+  const c=proj(0.5,0.5,W,H);
+  const lp=g.createRadialGradient(c.x,c.y,0,c.x,c.y,W*0.5);
+  lp.addColorStop(0,"rgba(170,205,240,.055)");lp.addColorStop(1,"rgba(170,205,240,0)");
+  g.fillStyle=lp;g.fillRect(0,horizon,W,H-horizon);
+
+  /* ---- floor markings: a bay has painted lanes. Kept in the blue family on
+     purpose: yellow floor paint reads as an amber warning, and judgement has
+     exactly one channel in this file. ---- */
+  g.strokeStyle="rgba(110,160,205,.13)";g.lineWidth=1;g.setLineDash([7,6]);
+  [0.47,0.53].forEach(xx=>{const a1=proj(xx,0.04,W,H),b1=proj(xx,1,W,H);
+    g.beginPath();g.moveTo(a1.x,a1.y);g.lineTo(b1.x,b1.y);g.stroke();});
+  g.setLineDash([]);
+
+  /* ---- machines, far row first so near ones overlap correctly ---- */
+  const prism=(cx,by,w,h,dep,sh)=>{
+    const t=sh||1;
+    g.fillStyle="rgba(10,17,25,.40)";
+    g.beginPath();g.ellipse(cx,by+1,w*0.62,dep*0.42,0,0,7);g.fill();
+    g.fillStyle="rgba("+Math.round(26*t)+","+Math.round(44*t)+","+Math.round(62*t)+",.97)";
+    g.fillRect(cx-w/2,by-h,w,h);
+    g.beginPath();
+    g.moveTo(cx-w/2,by-h);g.lineTo(cx+w/2,by-h);
+    g.lineTo(cx+w/2+dep,by-h-dep*0.52);g.lineTo(cx-w/2+dep,by-h-dep*0.52);g.closePath();
+    g.fillStyle="rgba("+Math.round(48*t)+","+Math.round(76*t)+","+Math.round(102*t)+",.97)";g.fill();
+    g.beginPath();
+    g.moveTo(cx+w/2,by-h);g.lineTo(cx+w/2+dep,by-h-dep*0.52);
+    g.lineTo(cx+w/2+dep,by-dep*0.52);g.lineTo(cx+w/2,by);g.closePath();
+    g.fillStyle="rgba("+Math.round(16*t)+","+Math.round(28*t)+","+Math.round(40*t)+",.97)";g.fill();
+    g.strokeStyle="rgba(130,175,215,.20)";g.lineWidth=1;
+    g.strokeRect(cx-w/2+.5,by-h+.5,w,h);
+  };
+  const panel=(cx,cy,w,h)=>{
+    g.fillStyle="rgba(8,14,20,.95)";g.fillRect(cx-w/2,cy,w,h);
+    g.fillStyle="rgba(96,170,232,.30)";g.fillRect(cx-w/2+1,cy+1,w-2,h-2);
+  };
+  const stackLight=(cx,by,k)=>{
+    const sw=2.6*k,sh2=4.2*k;
+    g.fillStyle="rgba(70,104,138,.9)";g.fillRect(cx-sw/2,by-sh2*3.4,sw,sh2*3.4);
+    ["rgba(150,200,245,.5)","rgba(120,170,215,.34)","rgba(90,130,175,.26)"]
+      .forEach((c,i)=>{g.fillStyle=c;g.fillRect(cx-sw/2,by-sh2*(3.3-i),sw,sh2*0.86);});
+  };
+
+  HUBS.slice().sort((a,b)=>a.y-b.y).forEach(h=>{
+    const q=proj(h.x,h.y,W,H),k=q.s, by=q.y, cx=q.x;
+    if(h.kind==="press"){
+      prism(cx,by,40*k,9*k,7*k);                       // bed / bolster
+      prism(cx-15*k,by-9*k,8*k,30*k,5*k,0.92);         // columns
+      prism(cx+15*k,by-9*k,8*k,30*k,5*k,0.92);
+      prism(cx,by-39*k,44*k,10*k,6*k,1.15);            // crown
+      g.fillStyle="rgba(120,165,205,.55)";             // ram
+      g.fillRect(cx-9*k,by-30*k,18*k,7*k);
+      g.fillStyle="rgba(96,170,232,.18)";g.fillRect(cx-9*k,by-23*k,18*k,2.4*k);
+      g.strokeStyle="rgba(130,175,215,.28)";g.lineWidth=1.1;
+      [-21,21].forEach(dx=>{g.beginPath();g.moveTo(cx+dx*k,by);
+        g.lineTo(cx+dx*k,by-26*k);g.stroke();});       // light curtain
+      panel(cx+26*k,by-24*k,9*k,7*k);                  // pendant
+      g.strokeStyle="rgba(100,140,180,.45)";g.beginPath();
+      g.moveTo(cx+26*k,by-17*k);g.lineTo(cx+22*k,by);g.stroke();
+      stackLight(cx-24*k,by-38*k,k);
+    } else if(h.kind==="cnc"){
+      prism(cx,by,50*k,30*k,9*k);                      // enclosure
+      g.fillStyle="rgba(10,18,27,.92)";g.fillRect(cx-19*k,by-26*k,24*k,16*k);
+      g.fillStyle="rgba(96,170,232,.22)";g.fillRect(cx-18*k,by-25*k,22*k,14*k);
+      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1;
+      g.strokeRect(cx-19*k+.5,by-26*k+.5,24*k,16*k);   // window
+      g.fillStyle="rgba(70,104,138,.85)";g.fillRect(cx-20*k,by-16*k,26*k,2*k);
+      panel(cx+15*k,by-26*k,13*k,11*k);                // HMI
+      prism(cx+30*k,by,12*k,12*k,5*k,0.86);            // chip conveyor
+      g.fillStyle="rgba(90,130,175,.3)";g.fillRect(cx+24*k,by-13*k,13*k,3*k);
+      stackLight(cx-25*k,by-30*k,k);
+    } else if(h.kind==="bench"){
+      prism(cx,by,52*k,4*k,9*k,1.1);                   // worktop
+      [-22,22].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
+        g.fillRect(cx+dx*k-1.6*k,by-4*k,3.2*k,4*k);}); // legs
+      prism(cx,by-22*k,48*k,3*k,6*k,0.9);              // shelf
+      for(let i=0;i<5;i++){
+        g.fillStyle="rgba(150,120,70,.32)";
+        g.fillRect(cx-21*k+i*9.4*k,by-21*k,7.4*k,5.4*k);
+        g.strokeStyle="rgba(150,120,70,.5)";g.lineWidth=.8;
+        g.strokeRect(cx-21*k+i*9.4*k+.4,by-21*k+.4,7.4*k,5.4*k);
+      }
+      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1.1;
+      g.beginPath();g.moveTo(cx+24*k,by-4*k);g.lineTo(cx+24*k,by-26*k);
+      g.lineTo(cx+12*k,by-28*k);g.stroke();
+      const gl=g.createRadialGradient(cx+10*k,by-26*k,0,cx+10*k,by-26*k,20*k);
+      gl.addColorStop(0,"rgba(150,200,245,.13)");gl.addColorStop(1,"rgba(150,200,245,0)");
+      g.fillStyle=gl;g.beginPath();g.arc(cx+10*k,by-26*k,20*k,0,7);g.fill();
+    } else if(h.kind==="booth"){
+      g.fillStyle="rgba(14,24,34,.75)";g.fillRect(cx-30*k,by-3*k,60*k,7*k);
+      g.strokeStyle="rgba(110,150,190,.18)";g.lineWidth=.8;
+      for(let i=0;i<10;i++){g.beginPath();g.moveTo(cx-30*k+i*6*k,by-3*k);
+        g.lineTo(cx-30*k+i*6*k,by+4*k);g.stroke();}    // grating
+      prism(cx,by-3*k,58*k,34*k,10*k,0.78);            // back wall
+      prism(cx-29*k,by-3*k,8*k,36*k,9*k,0.92);         // side returns
+      prism(cx+29*k,by-3*k,8*k,36*k,9*k,0.72);
+      g.fillStyle="rgba(96,170,232,.14)";g.fillRect(cx-24*k,by-34*k,48*k,27*k);
+      for(let i=0;i<4;i++){
+        g.fillStyle="rgba(120,160,200,.16)";
+        g.fillRect(cx-22*k+i*11.5*k,by-33*k,10*k,24*k);
+        g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=.8;
+        g.strokeRect(cx-22*k+i*11.5*k+.4,by-33*k+.4,10*k,24*k);
+      }                                                 // filter bank
+      prism(cx,by-37*k,64*k,7*k,11*k,1.2);             // extraction hood
+      g.fillStyle="rgba(90,130,175,.3)";g.fillRect(cx-6*k,by-56*k,12*k,12*k);
+    } else if(h.kind==="pack"){
+      prism(cx,by,70*k,11*k,9*k,1.05);                 // belt bed on a frame
+      g.fillStyle="rgba(80,116,150,.85)";
+      for(let i=0;i<12;i++) g.fillRect(cx-34*k+i*5.8*k,by-12.5*k,2.4*k,5.5*k);
+      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=1;  // side rails
+      g.beginPath();g.moveTo(cx-35*k,by-13*k);g.lineTo(cx+35*k,by-13*k);g.stroke();
+      [-30,-10,10,30].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
+        g.fillRect(cx+dx*k-1.4*k,by-4*k,2.8*k,4*k);});
+      prism(cx+26*k,by-4*k,13*k,22*k,6*k,0.9);         // strapping head
+      panel(cx+26*k,by-24*k,9*k,6*k);
+      for(let i=0;i<3;i++)
+        for(let j=0;j<(i===1?2:1);j++)
+          prism(cx-24*k+i*15*k,by-13*k-j*7*k,11*k,7*k,5*k,1.0+j*0.08);
+      prism(cx-40*k,by,16*k,3*k,7*k,0.7);              // pallet
+    } else {
+      prism(cx,by,38*k,4*k,8*k,1.08);                  // granite table
+      [-15,15].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
+        g.fillRect(cx+dx*k-1.6*k,by-4*k,3.2*k,4*k);});
+      prism(cx-10*k,by-4*k,4*k,20*k,3*k,0.95);         // height gauge
+      g.fillStyle="rgba(120,165,205,.5)";g.fillRect(cx-9*k,by-16*k,11*k,2.4*k);
+      panel(cx+12*k,by-18*k,11*k,8*k);
+      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1.1;
+      g.beginPath();g.moveTo(cx+17*k,by-4*k);g.lineTo(cx+17*k,by-30*k);
+      g.lineTo(cx+2*k,by-32*k);g.stroke();
+      const gl=g.createRadialGradient(cx,by-30*k,0,cx,by-30*k,26*k);
+      gl.addColorStop(0,"rgba(150,200,245,.17)");gl.addColorStop(1,"rgba(150,200,245,0)");
+      g.fillStyle=gl;g.beginPath();g.arc(cx,by-30*k,26*k,0,7);g.fill();
+      prism(cx+26*k,by,10*k,8*k,5*k,0.72);             // reject bin
+    }
+  });
+
+  /* props, so the bay is not six machines on an empty slab */
+  [[0.30,0.52],[0.70,0.46],[0.93,0.92]].forEach((p,i)=>{
+    const q=proj(p[0],p[1],W,H),k=q.s;
+    g.fillStyle="rgba(10,17,25,.35)";
+    g.beginPath();g.ellipse(q.x,q.y+1,10*k,3*k,0,0,7);g.fill();
+    g.fillStyle="rgba(150,120,70,.20)";g.fillRect(q.x-9*k,q.y-7*k,18*k,7*k);
+    g.strokeStyle="rgba(150,120,70,.34)";g.lineWidth=.9;
+    g.strokeRect(q.x-9*k+.5,q.y-7*k+.5,18*k,7*k);
+    if(i===1){g.fillStyle="rgba(150,120,70,.16)";g.fillRect(q.x-9*k,q.y-13*k,18*k,6*k);}
+  });
+
+  return cv;
+}
+
+/* ================================================================
+   5 · THE SCENE
+   ================================================================ */
+function drawBox(ctx,x,y,w,h,col,lw){
+  const c=Math.min(7,Math.min(w,h)*0.3);
+  ctx.strokeStyle=col;ctx.lineWidth=lw||1.2;ctx.beginPath();
+  ctx.moveTo(x,y+c);ctx.lineTo(x,y);ctx.lineTo(x+c,y);
+  ctx.moveTo(x+w-c,y);ctx.lineTo(x+w,y);ctx.lineTo(x+w,y+c);
+  ctx.moveTo(x+w,y+h-c);ctx.lineTo(x+w,y+h);ctx.lineTo(x+w-c,y+h);
+  ctx.moveTo(x+c,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+h-c);
+  ctx.stroke();
+}
+
+/* where a worker stands inside their hub */
+function spot(w,h,i,n){
+  const cols=Math.min(3,Math.max(1,Math.ceil(Math.sqrt(n))));
+  const row=Math.floor(i/cols), rows=Math.ceil(n/cols), col=i%cols;
+  const sx=(cols===1)?0:(col/(cols-1)-0.5);
+  const sy=(rows===1)?0:(row/(rows-1)-0.5);
+  return {x:clamp(h.x+sx*h.dx*1.15+w.ox*0.035,0.04,0.96),
+          y:clamp(h.y+sy*h.dy*0.82+w.oy*0.03+h.dy*0.38,0.06,0.985)};
+}
+
+function drawScene(ctx,W,H,st,min,t,onto){
+  if(!PLATE||PW!==W||PH!==H){PLATE=buildPlate(W,H);PW=W;PH=H;}
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(PLATE,0,0);
+  const font=CSSV("--font");
+
+  /* ---- zone fences. Neutral unless an ontology rule is broken. ---- */
+  HUBS.forEach(h=>{
+    const n=st.counts[h.id];
+    const rule=onto?ONTOLOGY.rules[h.id]:null;
+    const over=rule&&rule.max!=null&&n>rule.max;
+    const under=rule&&rule.min!=null&&n<rule.min;
+    const bad=over||under;
+    const q1=proj(h.x-h.dx,h.y-h.dy,W,H),q2=proj(h.x+h.dx,h.y-h.dy,W,H),
+          q3=proj(h.x+h.dx,h.y+h.dy,W,H),q4=proj(h.x-h.dx,h.y+h.dy,W,H);
+    ctx.beginPath();ctx.moveTo(q1.x,q1.y);ctx.lineTo(q2.x,q2.y);
+    ctx.lineTo(q3.x,q3.y);ctx.lineTo(q4.x,q4.y);ctx.closePath();
+    ctx.fillStyle=bad?"rgba(226,82,74,.13)":(n?"rgba(126,203,255,.055)":"rgba(126,203,255,.02)");
+    ctx.fill();
+    ctx.strokeStyle=bad?"rgba(255,140,132,.92)":(n?"rgba(110,170,220,.46)":"rgba(90,130,170,.26)");
+    ctx.lineWidth=bad?1.9:1;
+    ctx.setLineDash(n?[]:[4,4]);ctx.stroke();ctx.setLineDash([]);
+
+    ctx.font="700 8.5px "+font;
+    ctx.fillStyle=bad?"#ffb4ae":"#6f9cc4";
+    ctx.fillText(h.id.toUpperCase()+" · "+h.m.toUpperCase()+"  ["+n+"]",q1.x+5,q1.y-5);
+    if(bad){
+      ctx.font="700 8px "+font;ctx.fillStyle="#ff9d96";
+      ctx.fillText(over?("OVER ONTOLOGY LIMIT "+rule.max):"UNMANNED · ONTOLOGY REQUIRES 1",
+                   q1.x+5,q1.y+10);
+    }
+  });
+
+  /* ---- people. Draw far to near so overlap reads correctly. ---- */
+  const drawn=[];
+  HUBS.forEach(h=>{
+    const mine=WORKERS.filter(w=>st.at[w.id]===h.id);
+    mine.forEach((w,i)=>{
+      const moving=st.transit.find(x=>x.id===w.id);
+      let pos=spot(w,h,i,mine.length);
+      if(moving){
+        const a=HUBS[HUBI[moving.from]],b=HUBS[HUBI[moving.to]];
+        const e=moving.p<0.5?2*moving.p*moving.p:1-Math.pow(-2*moving.p+2,2)/2;
+        pos={x:lerp(a.x,b.x,e)+ (Math.sin(e*3.14)*0.0),
+             y:lerp(a.y+a.dy*0.38,b.y+b.dy*0.38,e)};
+      }
+      drawn.push({w,h,pos,moving});
+    });
+  });
+  drawn.sort((a,b)=>a.pos.y-b.pos.y);
+
+  drawn.forEach(({w,pos,moving})=>{
+    const p=proj(pos.x,pos.y,W,H),k=p.s;
+    /* a tracked identity keeps a short tail — that IS the tracking skill */
+    if(moving){
+      const a=HUBS[HUBI[moving.from]],b=HUBS[HUBI[moving.to]];
+      ctx.strokeStyle="rgba(150,225,255,.30)";ctx.lineWidth=1.3;
+      ctx.beginPath();
+      for(let s=0;s<=10;s++){
+        const u=Math.max(0,moving.p-(1-s/10)*0.35);
+        const e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+        const q=proj(lerp(a.x,b.x,e),lerp(a.y+a.dy*0.38,b.y+b.dy*0.38,e),W,H);
+        s?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);
+      }
+      ctx.stroke();
+    }
+    const sway=Math.sin(t*0.8+w.ph)*0.7;
+    const torso=(moving?52:46)*k, headR=8.0*k, shoulder=21*k, waist=15*k;
+    const cx=p.x+sway*k, base=p.y, ty=base-torso;
+    ctx.fillStyle="rgba(0,0,0,.3)";
+    ctx.beginPath();ctx.ellipse(cx,base+1.5*k,shoulder*0.6,2.6*k,0,0,7);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx-waist/2,base);
+    ctx.lineTo(cx-shoulder/2,ty+torso*0.24);
+    ctx.quadraticCurveTo(cx-shoulder/2,ty,cx-shoulder*0.3,ty);
+    ctx.lineTo(cx+shoulder*0.3,ty);
+    ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
+    ctx.lineTo(cx+waist/2,base);ctx.closePath();
+    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
+    bg.addColorStop(0,"rgba(176,206,231,.5)");bg.addColorStop(1,"rgba(118,150,182,.36)");
+    ctx.fillStyle=bg;ctx.fill();
+    const hy=ty-headR*0.72;
+    ctx.beginPath();ctx.ellipse(cx,hy,headR*0.84,headR,0,0,7);
+    ctx.fillStyle="rgba(192,220,244,.6)";ctx.fill();
+
+    const bx=cx-shoulder/2-2.5*k, by=hy-headR-2.5*k, bw=shoulder+5*k, bh=base-by;
+    /* one hue family: a moving worker is a state, not a verdict */
+    drawBox(ctx,bx,by,bw,bh,moving?"rgba(150,225,255,.95)":"rgba(126,204,255,.85)",1.2);
+    if(k>0.5){
+      ctx.font="600 8.5px "+font;
+      ctx.fillStyle=moving?"rgba(190,240,255,.95)":"rgba(196,229,255,.86)";
+      ctx.fillText(w.id+" "+w.conf.toFixed(2),bx,by-4);
+    }
+  });
+
+  /* ---- the floater, drawn last so it sits on top of whoever it is beside ---- */
+  (function(){
+    const fl=st.fl, bad=onto&&fl.viol;
+    /* route so far — the shape of a shift, which is what tracking buys */
+    const stops=[];
+    for(const sg of FL_SEG){ if(sg.t>min) break; if(sg.hub) stops.push(sg.hub); }
+    const route=stops.filter((v,i)=>i===0||v!==stops[i-1]).slice(-6);
+    if(route.length>1){
+      ctx.setLineDash([2,4]);ctx.strokeStyle="rgba(150,225,255,.22)";ctx.lineWidth=1.1;
+      ctx.beginPath();
+      route.forEach((hid,i)=>{const hh=HUBS[HUBI[hid]];
+        const q=proj(hh.x-hh.dx*0.75,hh.y+hh.dy*0.55,W,H);
+        i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    let pos;
+    if(fl.moving){
+      const a=HUBS[HUBI[fl.moving.from]],b=HUBS[HUBI[fl.moving.to]];
+      const e=fl.moving.p<0.5?2*fl.moving.p*fl.moving.p:1-Math.pow(-2*fl.moving.p+2,2)/2;
+      pos={x:lerp(a.x-a.dx*0.75,b.x-b.dx*0.75,e),
+           y:lerp(a.y+a.dy*0.55,b.y+b.dy*0.55,e)};
+      ctx.setLineDash([]);ctx.strokeStyle="rgba(150,225,255,.34)";ctx.lineWidth=1.4;
+      ctx.beginPath();
+      for(let q=0;q<=10;q++){
+        const u=Math.max(0,fl.moving.p-(1-q/10)*0.3);
+        const e2=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+        const pp=proj(lerp(a.x-a.dx*0.75,b.x-b.dx*0.75,e2),
+                      lerp(a.y+a.dy*0.55,b.y+b.dy*0.55,e2),W,H);
+        q?ctx.lineTo(pp.x,pp.y):ctx.moveTo(pp.x,pp.y);
+      }
+      ctx.stroke();
+    } else {
+      const hh=HUBS[HUBI[fl.hub]];
+      pos={x:hh.x-hh.dx*0.75,y:hh.y+hh.dy*0.55};
+    }
+    const p=proj(pos.x,pos.y,W,H),k=p.s;
+    const sway=Math.sin(t*(fl.state==="idle"?0.35:1.25))*0.9;
+    const torso=50*k, headR=8.4*k, shoulder=22*k, waist=16*k;
+    const cx=p.x+sway*k, base=p.y, ty=base-torso;
+    ctx.fillStyle="rgba(0,0,0,.34)";
+    ctx.beginPath();ctx.ellipse(cx,base+1.5*k,shoulder*0.62,2.8*k,0,0,7);ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx-waist/2,base);
+    ctx.lineTo(cx-shoulder/2,ty+torso*0.24);
+    ctx.quadraticCurveTo(cx-shoulder/2,ty,cx-shoulder*0.3,ty);
+    ctx.lineTo(cx+shoulder*0.3,ty);
+    ctx.quadraticCurveTo(cx+shoulder/2,ty,cx+shoulder/2,ty+torso*0.24);
+    ctx.lineTo(cx+waist/2,base);ctx.closePath();
+    const bg=ctx.createLinearGradient(cx-shoulder/2,ty,cx+shoulder/2,base);
+    bg.addColorStop(0,"rgba(198,226,248,.62)");bg.addColorStop(1,"rgba(132,166,198,.44)");
+    ctx.fillStyle=bg;ctx.fill();
+    /* a vest band, so the floater is findable in a crowd without a hue */
+    ctx.fillStyle="rgba(226,240,255,.5)";
+    ctx.fillRect(cx-shoulder*0.42,ty+torso*0.36,shoulder*0.84,torso*0.13);
+    const hy=ty-headR*0.72;
+    ctx.beginPath();ctx.ellipse(cx,hy,headR*0.84,headR,0,0,7);
+    ctx.fillStyle="rgba(206,230,250,.68)";ctx.fill();
+
+    const bx=cx-shoulder/2-3*k, by=hy-headR-3*k, bw=shoulder+6*k, bh=base-by;
+    const col=bad?"rgba(255,120,110,.98)":"rgba(170,232,255,.95)";
+    drawBox(ctx,bx,by,bw,bh,col,bad?2:1.4);
+    if(bad){
+      ctx.strokeStyle="rgba(255,120,110,.35)";ctx.lineWidth=1;
+      ctx.strokeRect(bx-3,by-3,bw+6,bh+6);
+    }
+    ctx.font="700 9px "+font;
+    ctx.fillStyle=bad?"rgba(255,180,174,.98)":"rgba(206,240,255,.95)";
+    ctx.fillText("ID "+FLOATER.id+" "+FLOATER.conf.toFixed(2),bx,by-14);
+    ctx.font="600 8.5px "+font;
+    const tag=(bad?"⚠ ":"")+fl.task.toUpperCase()+" · "+flLabel(fl.state,onto).toUpperCase();
+    const tw2=ctx.measureText(tag).width;
+    ctx.fillStyle=bad?"rgba(120,26,24,.86)":"rgba(10,22,34,.80)";
+    ctx.fillRect(bx-1,by-12,tw2+8,11);
+    ctx.fillStyle=bad?"#ffd0cb":"#9fd4f2";
+    ctx.fillText(tag,bx+3,by-3.5);
+  })();
+
+  /* ---- what the frame is, bottom-left, clear of the HTML chip row ---- */
+  ctx.font="700 9px "+font;
+  const line="TRACKING "+(WORKERS.length+1)+" IDENTITIES · "+st.inFrame+" IN FRAME · "+
+             st.transit.length+" IN TRANSIT";
+  const tw=ctx.measureText(line).width;
+  ctx.fillStyle="rgba(8,16,26,.74)";ctx.fillRect(10,H-HUD_FOOT-16,tw+14,16);
+  ctx.fillStyle="#a8c8e6";ctx.fillText(line,17,H-HUD_FOOT-5);
+}
+
+/* ================================================================
+   6 · SHELL
+   ================================================================ */
+const cv=document.getElementById("cv"), stage=document.getElementById("stage");
+const sparkC=document.getElementById("spark"), track=document.getElementById("track");
+const headEl=document.getElementById("head");
+const elTime=document.getElementById("tlTime"), elTs=document.getElementById("hTs");
+const elFrame=document.getElementById("sFrame"), elTrack=document.getElementById("sTrack");
+const elMove=document.getElementById("sMove"), elBig=document.getElementById("rBig");
+const elSub=document.getElementById("rSub"), elZones=document.getElementById("zones");
+const elEvents=document.getElementById("events"), elNote=document.getElementById("ontoNote");
+const btnPlay=document.getElementById("btnPlay"), btnOnto=document.getElementById("btnOnto");
+const selSpeed=document.getElementById("speed");
+
+let head=SHIFT_FROM, playing=true, speed=20, onto=true, dragging=false;
+let last=performance.now(), lastMin=-1, sparkedW=0;
+
+function sizeCanvas(c,w,h){
+  const dpr=Math.min(2,devicePixelRatio||1);
+  if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){
+    c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
+  const ctx=c.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return ctx;
+}
+
+function paintSpark(){
+  const w=track.clientWidth,h=track.clientHeight;
+  if(!w||w===sparkedW) return; sparkedW=w;
+  sparkC.style.width=w+"px";sparkC.style.height=h+"px";
+  const g=sizeCanvas(sparkC,w,h);
+  g.clearRect(0,0,w,h);
+  const max=Math.max.apply(null,SERIES)||1;
+  g.beginPath();g.moveTo(0,h);
+  SERIES.forEach((v,i)=>{const x=i/(SERIES.length-1)*w,y=h-(v/max)*(h-5)-2;
+    i?g.lineTo(x,y):g.lineTo(x,y);});
+  g.lineTo(w,h);g.closePath();
+  g.fillStyle="rgba(126,203,255,.18)";g.fill();
+  g.beginPath();
+  SERIES.forEach((v,i)=>{const x=i/(SERIES.length-1)*w,y=h-(v/max)*(h-5)-2;
+    i?g.lineTo(x,y):g.moveTo(x,y);});
+  g.strokeStyle="rgba(150,210,255,.75)";g.lineWidth=1.2;g.stroke();
+}
+
+function zoneRows(st){
+  elZones.innerHTML="";
+  HUBS.forEach(h=>{
+    const n=st.counts[h.id], rule=onto?ONTOLOGY.rules[h.id]:null;
+    const over=rule&&rule.max!=null&&n>rule.max, under=rule&&rule.min!=null&&n<rule.min;
+    const row=document.createElement("div");
+    row.className="zrow"+((over||under)?" breach":"");
+    const cap=rule?'<small>'+rule.label+'</small>':'<small>'+h.m+'</small>';
+    row.innerHTML='<u><i></i><s>'+h.n+cap+'</s></u>'+
+                  '<b>'+n+'</b>'+
+                  '<em>'+(n?hm(st.dwell[h.id]).replace(":","h "):"—")+'</em>';
+    elZones.appendChild(row);
+  });
+}
+
+function renderFloater(st,min){
+  const fl=st.fl, bad=onto&&fl.viol, el=document.getElementById("fl");
+  el.className="fl"+(bad?" bad":"");
+  const total=SHIFT_TO-SHIFT_FROM;
+  let strip="";
+  for(let i=0;i<FL_SEG.length-1;i++){
+    const sg=FL_SEG[i], nx=FL_SEG[i+1], span=nx.t-sg.t;
+    const v=flViolation(sg,span);
+    const cls=sg.st==="move"?"m":((onto&&v)?"bad":(sg.st==="work"?"s":""));
+    strip+='<i class="'+cls+'" style="flex-grow:'+(span/total*100)+'" title="'+
+           hm(sg.t)+" · "+flLabel(sg.st,onto)+'"></i>';
+  }
+  const pct=clamp((min-SHIFT_FROM)/total*100,0,100);
+  el.innerHTML=
+    '<div class="fl-h">Floater · ID '+FLOATER.id+' <b>'+fl.task+'</b></div>'+
+    '<div class="fl-now"><s>'+flLabel(fl.state,onto)+'</s>'+
+      '<em>'+Math.round(fl.dur)+' min in this state</em></div>'+
+    '<div class="fl-why">'+(fl.viol||"")+'</div>'+
+    '<div class="fl-strip">'+strip+
+      '<i class="fl-head" style="left:'+pct+'%"></i></div>'+
+    '<div class="fl-ax"><span>06:00</span><span>one person, one shift</span>'+
+      '<span>18:00</span></div>';
+}
+
+function eventRows(min){
+  const out=[];
+  for(let i=MOVES.length-1;i>=0&&out.length<40;i--){
+    const mv=MOVES[i]; if(mv.t>min) continue;
+    if(!mv.to){ out.push({t:mv.t,flag:false,
+        txt:"ID "+mv.id+" left frame from "+HUBS[HUBI[mv.from]].n}); }
+    else if(!mv.from){ out.push({t:mv.t,flag:false,
+        txt:"ID "+mv.id+" re-entered at "+HUBS[HUBI[mv.to]].n}); }
+    else {
+      out.push({t:mv.t,flag:false,
+        txt:"ID "+mv.id+" left "+HUBS[HUBI[mv.from]].n});
+      if(mv.t+TRANSIT<=min) out.push({t:mv.t+TRANSIT,flag:false,
+        txt:"ID "+mv.id+" entered "+HUBS[HUBI[mv.to]].n});
+    }
+  }
+  /* with an ontology loaded the same stream also carries findings */
+  if(onto){
+    const seen={};
+    for(let i=MOVES.length-1;i>=0;i--){
+      const mv=MOVES[i]; if(mv.t>min) continue;
+      const s=stateAt(mv.t);
+      HUBS.forEach(h=>{
+        const r=ONTOLOGY.rules[h.id],n=s.counts[h.id];
+        const bad=(r.max!=null&&n>r.max)||(r.min!=null&&n<r.min);
+        if(bad&&!seen[h.id]){seen[h.id]=1;
+          out.push({t:mv.t,flag:true,
+            txt:(r.min!=null?h.n+" unmanned — ontology requires 1"
+                            :h.n+" at "+n+" — ontology limit "+r.max)});}
+      });
+      if(Object.keys(seen).length>=3) break;
+    }
+    FL_SEG.forEach((sg,i)=>{
+      if(sg.t>min) return;
+      const nx=FL_SEG[i+1]||{t:SHIFT_TO};
+      const v=flViolation(sg,Math.min(min,nx.t)-sg.t);
+      if(v) out.push({t:sg.t,flag:true,txt:"ID "+FLOATER.id+" · "+v});
+    });
+  }
+  out.sort((a,b)=>b.t-a.t);
+  elEvents.innerHTML="";
+  if(!out.length){elEvents.innerHTML='<li class="none">No events yet at this minute</li>';return;}
+  out.slice(0,26).forEach(e=>{
+    const li=document.createElement("li");
+    if(e.flag) li.className="flag";
+    li.innerHTML='<u>'+hm(e.t)+'</u><span>'+e.txt+'</span>';
+    elEvents.appendChild(li);
+  });
+}
+
+function syncOnto(){
+  btnOnto.setAttribute("aria-pressed",String(onto));
+  elNote.innerHTML = onto
+    ? '<b>'+ONTOLOGY.source+'.</b> The counts have not changed — the same six '+
+      'signals are on screen. What changed is that the floor now has rules to be '+
+      'measured against, and only the breaches are coloured.'
+    : '<b>Ontology not loaded.</b> The floor is reporting signals only — who is '+
+      'where, for how long. What counts as too many or too few at a hub is the '+
+      "plant's own rule, not ours. Load an ontology to turn these counts into findings.";
+  elSub.innerHTML = onto
+    ? 'Headcount and tracking, scored against the plant ontology.'
+    : 'Headcount and tracking only. <em>No judgement applied.</em>';
+}
+
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(playing&&!dragging){
+    head+=speed*dt;
+    if(head>=SHIFT_TO) head=SHIFT_FROM;
+  }
+  const min=Math.floor(head);
+  const W=stage.clientWidth,H=stage.clientHeight;
+  const ctx=sizeCanvas(cv,W,H);
+  const st=stateAt(min);
+  drawScene(ctx,W,H,st,min,now/1000,onto);
+
+  elTime.textContent=hm(head);
+  headEl.style.left=((head-SHIFT_FROM)/(SHIFT_TO-SHIFT_FROM)*100)+"%";
+  paintSpark();
+
+  if(min!==lastMin){
+    lastMin=min;
+    elTs.textContent=hm(head)+"  14/08/2026";
+    elFrame.textContent=st.inFrame;
+    elTrack.textContent=WORKERS.length+1;   // +1: the floater
+    elMove.textContent=st.transit.length;
+    elBig.textContent=st.inFrame;
+    zoneRows(st);
+    renderFloater(st,min);
+    eventRows(min);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* transport */
+btnPlay.addEventListener("click",()=>{playing=!playing;btnPlay.textContent=playing?"❚❚":"▶";});
+selSpeed.addEventListener("change",()=>{speed=+selSpeed.value;});
+function scrubTo(clientX){
+  const r=track.getBoundingClientRect();
+  head=SHIFT_FROM+clamp((clientX-r.left)/r.width,0,1)*(SHIFT_TO-SHIFT_FROM);
+  lastMin=-1;
+}
+track.addEventListener("pointerdown",e=>{dragging=true;playing=false;
+  btnPlay.textContent="▶";scrubTo(e.clientX);track.setPointerCapture(e.pointerId);});
+track.addEventListener("pointermove",e=>{if(dragging)scrubTo(e.clientX);});
+track.addEventListener("pointerup",()=>{dragging=false;});
+track.addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft"||e.key==="ArrowRight"){e.preventDefault();
+    playing=false;btnPlay.textContent="▶";
+    head=clamp(head+(e.key==="ArrowRight"?10:-10),SHIFT_FROM,SHIFT_TO-1);lastMin=-1;}
+});
+btnOnto.addEventListener("click",()=>{onto=!onto;syncOnto();lastMin=-1;});
+addEventListener("resize",()=>{PLATE=null;sparkedW=0;lastMin=-1;});
+addEventListener("keydown",e=>{
+  if(e.target&&/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName)) return;
+  if(e.key===" "){e.preventDefault();playing=!playing;btnPlay.textContent=playing?"❚❚":"▶";}
+  if(e.key.toLowerCase()==="o"){onto=!onto;syncOnto();lastMin=-1;}
+});
+
+syncOnto();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

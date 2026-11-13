@@ -585,10 +585,32 @@ repeat is not a story you can present. Its states (at machine / stationary / at 
 machine off its matrix / walked away from a running machine) are signals; the red mark
 on it comes from `ONTOLOGY.worker`, same as everything else.
 
-**Machines are drawn as solids, not rectangles.** `prism()` gives a front, a top and one
-side face; flat rects read as placeholders, which is what they were in the first cut.
-Floor lane markings stay in the blue family on purpose — yellow floor paint reads as an
-amber warning, and judgement has exactly one channel.
+**Machines are drawn as solids, not rectangles**, and two things had to be true before
+they stopped looking like toys:
+
+- **Size them against the people, not against nothing.** A drawn figure is 54 units from
+  floor to crown and stands 1.8 m, so **30 units = 1 m**, and every machine dimension is
+  a real measurement run through that — a press 2.5 m wide and 4 m to the crown, a spray
+  booth 5 m by 3.2 m, a 6 m conveyor. The first cut used arbitrary numbers and made the
+  press 1.3 m wide: a kitchen appliance on a factory floor.
+- **The side a solid shows depends on which half of the frame it stands in.** A camera at
+  the back centre looks *across* a machine and sees the face pointing at the middle, so
+  `dir` is +1 left of centre and −1 right of it. Drawing every solid with its right side
+  showing was most of what made the bay read wrong, and it is invisible until you look at
+  two machines on opposite sides at once.
+
+**A part with nothing holding it up is what the eye catches.** A stack light hanging off a
+crown, a pendant joined to the floor by a diagonal hairline, a QC readout levitating beside
+its table — each read as a rendering glitch. Everything stands on a post, a table or the
+floor now. Floor lane markings stay in the blue family on purpose — yellow floor paint
+reads as an amber warning, and judgement has exactly one channel.
+
+**The plate is painted before the people**, so a worker standing level with their machine
+draws *over* its face instead of behind it. `spot()` keeps every worker in front of the
+machine line, and its jitter is scaled by the zone's own `dy` — an absolute jitter pushed
+workers outside the very fence that was counting them, but only on the shallow far row
+where `dy` is small. Both are asserted: sample the shift and check no placement falls
+outside its fence or behind its machine.
 
 ## Working on this project
 

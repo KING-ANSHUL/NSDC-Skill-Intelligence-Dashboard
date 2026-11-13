@@ -291,12 +291,12 @@ const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).tri
 const SHIFT_FROM=6*60, SHIFT_TO=18*60;           // 06:00 – 18:00
 
 const HUBS=[
-  {id:"H1",n:"Hub 1",m:"Hydraulic Press", x:.165,y:.27,dx:.125,dy:.115,base:2,kind:"press"},
-  {id:"H2",n:"Hub 2",m:"CNC Line",        x:.50, y:.25,dx:.135,dy:.115,base:4,kind:"cnc"},
-  {id:"H3",n:"Hub 3",m:"Assembly Bench",  x:.835,y:.27,dx:.125,dy:.115,base:2,kind:"bench"},
-  {id:"H4",n:"Hub 4",m:"Paint Booth",     x:.165,y:.70,dx:.145,dy:.145,base:6,kind:"booth"},
-  {id:"H5",n:"Hub 5",m:"Packing Line",    x:.50, y:.745,dx:.155,dy:.145,base:3,kind:"pack"},
-  {id:"H6",n:"Hub 6",m:"QC Station",      x:.835,y:.70,dx:.145,dy:.145,base:1,kind:"qc"}
+  {id:"H1",n:"Hub 1",m:"Hydraulic Press", x:.165,y:.32,dx:.128,dy:.120,base:2,kind:"press"},
+  {id:"H2",n:"Hub 2",m:"CNC Line",        x:.50, y:.30,dx:.138,dy:.120,base:4,kind:"cnc"},
+  {id:"H3",n:"Hub 3",m:"Assembly Bench",  x:.835,y:.32,dx:.128,dy:.120,base:2,kind:"bench"},
+  {id:"H4",n:"Hub 4",m:"Paint Booth",     x:.165,y:.75,dx:.148,dy:.150,base:6,kind:"booth"},
+  {id:"H5",n:"Hub 5",m:"Packing Line",    x:.50, y:.78,dx:.158,dy:.150,base:3,kind:"pack"},
+  {id:"H6",n:"Hub 6",m:"QC Station",      x:.835,y:.75,dx:.148,dy:.150,base:1,kind:"qc"}
 ];
 const HUBI={};HUBS.forEach((h,i)=>HUBI[h.id]=i);
 
@@ -556,142 +556,174 @@ function buildPlate(W,H){
   /* ---- floor markings: a bay has painted lanes. Kept in the blue family on
      purpose: yellow floor paint reads as an amber warning, and judgement has
      exactly one channel in this file. ---- */
-  g.strokeStyle="rgba(110,160,205,.13)";g.lineWidth=1;g.setLineDash([7,6]);
-  [0.47,0.53].forEach(xx=>{const a1=proj(xx,0.04,W,H),b1=proj(xx,1,W,H);
+  g.strokeStyle="rgba(110,160,205,.14)";g.lineWidth=1.4;g.setLineDash([9,7]);
+  [0.455,0.545].forEach(xx=>{const a1=proj(xx,0.04,W,H),b1=proj(xx,1,W,H);
     g.beginPath();g.moveTo(a1.x,a1.y);g.lineTo(b1.x,b1.y);g.stroke();});
   g.setLineDash([]);
 
-  /* ---- machines, far row first so near ones overlap correctly ---- */
-  const prism=(cx,by,w,h,dep,sh)=>{
-    const t=sh||1;
-    g.fillStyle="rgba(10,17,25,.40)";
-    g.beginPath();g.ellipse(cx,by+1,w*0.62,dep*0.42,0,0,7);g.fill();
-    g.fillStyle="rgba("+Math.round(26*t)+","+Math.round(44*t)+","+Math.round(62*t)+",.97)";
-    g.fillRect(cx-w/2,by-h,w,h);
-    g.beginPath();
-    g.moveTo(cx-w/2,by-h);g.lineTo(cx+w/2,by-h);
-    g.lineTo(cx+w/2+dep,by-h-dep*0.52);g.lineTo(cx-w/2+dep,by-h-dep*0.52);g.closePath();
-    g.fillStyle="rgba("+Math.round(48*t)+","+Math.round(76*t)+","+Math.round(102*t)+",.97)";g.fill();
-    g.beginPath();
-    g.moveTo(cx+w/2,by-h);g.lineTo(cx+w/2+dep,by-h-dep*0.52);
-    g.lineTo(cx+w/2+dep,by-dep*0.52);g.lineTo(cx+w/2,by);g.closePath();
-    g.fillStyle="rgba("+Math.round(16*t)+","+Math.round(28*t)+","+Math.round(40*t)+",.97)";g.fill();
-    g.strokeStyle="rgba(130,175,215,.20)";g.lineWidth=1;
-    g.strokeRect(cx-w/2+.5,by-h+.5,w,h);
-  };
-  const panel=(cx,cy,w,h)=>{
-    g.fillStyle="rgba(8,14,20,.95)";g.fillRect(cx-w/2,cy,w,h);
-    g.fillStyle="rgba(96,170,232,.30)";g.fillRect(cx-w/2+1,cy+1,w-2,h-2);
-  };
-  const stackLight=(cx,by,k)=>{
-    const sw=2.6*k,sh2=4.2*k;
-    g.fillStyle="rgba(70,104,138,.9)";g.fillRect(cx-sw/2,by-sh2*3.4,sw,sh2*3.4);
-    ["rgba(150,200,245,.5)","rgba(120,170,215,.34)","rgba(90,130,175,.26)"]
-      .forEach((c,i)=>{g.fillStyle=c;g.fillRect(cx-sw/2,by-sh2*(3.3-i),sw,sh2*0.86);});
-  };
+  /* ---- machines ----
+     SCALE: a drawn figure is 54 units from floor to crown and stands 1.8 m, so
+     one metre is 30 units. Every dimension below is a real machine measurement
+     run through that, which is why a press is 2.5 m wide and a spray booth 5 m.
+     DIRECTION: dir is +1 on the left half of the frame and -1 on the right,
+     because a camera at the back centre looks ACROSS a machine and sees the
+     face that points at the middle. Drawing every solid with its right side
+     showing was most of what made the bay look wrong. ---- */
+  const machine=(h)=>{
+    const q=proj(h.x,h.y,W,H), k=q.s, by=q.y, cx=q.x;
+    const dir=h.x<0.5?1:(h.x>0.5?-1:1);
+    const U=k;                                   // one model unit in pixels
 
-  HUBS.slice().sort((a,b)=>a.y-b.y).forEach(h=>{
-    const q=proj(h.x,h.y,W,H),k=q.s, by=q.y, cx=q.x;
+    const prism=(ox,oy,w,ht,dep,shade)=>{        // ox/oy are unit offsets
+      const x=cx+ox*U, y=by+oy*U, W2=w*U, H2=ht*U, D=dep*U, t=shade||1;
+      g.fillStyle="rgba(10,17,25,.40)";
+      g.beginPath();g.ellipse(x,y+1,W2*0.60,Math.max(2,D*0.40),0,0,7);g.fill();
+      g.fillStyle="rgba("+Math.round(26*t)+","+Math.round(44*t)+","+Math.round(62*t)+",.97)";
+      g.fillRect(x-W2/2,y-H2,W2,H2);                                     // front
+      g.beginPath();                                                     // top
+      g.moveTo(x-W2/2,y-H2);g.lineTo(x+W2/2,y-H2);
+      g.lineTo(x+W2/2+D*dir,y-H2-D*0.52);g.lineTo(x-W2/2+D*dir,y-H2-D*0.52);
+      g.closePath();
+      g.fillStyle="rgba("+Math.round(50*t)+","+Math.round(79*t)+","+Math.round(106*t)+",.97)";
+      g.fill();
+      g.beginPath();                                                     // inner side
+      const sx=dir>0?x+W2/2:x-W2/2;
+      g.moveTo(sx,y-H2);g.lineTo(sx+D*dir,y-H2-D*0.52);
+      g.lineTo(sx+D*dir,y-D*0.52);g.lineTo(sx,y);g.closePath();
+      g.fillStyle="rgba("+Math.round(15*t)+","+Math.round(27*t)+","+Math.round(39*t)+",.97)";
+      g.fill();
+      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=1;
+      g.strokeRect(x-W2/2+.5,y-H2+.5,W2,H2);
+    };
+    const slab=(ox,oy,w,ht,col)=>{               // a flat plate, no depth
+      g.fillStyle=col;g.fillRect(cx+ox*U-w*U/2,by+oy*U-ht*U,w*U,ht*U);
+    };
+    const screen=(ox,oy,w,ht)=>{
+      const x=cx+ox*U-w*U/2,y=by+oy*U-ht*U;
+      g.fillStyle="rgba(8,14,20,.95)";g.fillRect(x,y,w*U,ht*U);
+      g.fillStyle="rgba(96,170,232,.32)";g.fillRect(x+1,y+1,w*U-2,ht*U-2);
+    };
+    const post=(ox,oy,w,ht,col)=>{
+      g.fillStyle=col||"rgba(20,34,47,.95)";
+      g.fillRect(cx+ox*U-w*U/2,by+oy*U-ht*U,w*U,ht*U);
+    };
+    const andon=(ox)=>{                          // stack light on its own post
+      const x=cx+ox*U, w=5*U, seg=7*U, top=by-94*U;
+      g.fillStyle="rgba(10,17,25,.35)";
+      g.beginPath();g.ellipse(x,by+1,6*U,2*U,0,0,7);g.fill();
+      g.fillStyle="rgba(44,68,92,.95)";                       // post
+      g.fillRect(x-w*0.3,top+seg*3,w*0.6,by-(top+seg*3));
+      ["rgba(150,200,245,.55)","rgba(120,170,215,.38)","rgba(92,132,176,.30)"]
+        .forEach((c,i)=>{g.fillStyle=c;g.fillRect(x-w/2,top+i*seg,w,seg*0.82);});
+      g.strokeStyle="rgba(130,175,215,.25)";g.lineWidth=.9;
+      g.strokeRect(x-w/2+.5,top+.5,w,seg*3);
+    };
+
     if(h.kind==="press"){
-      prism(cx,by,40*k,9*k,7*k);                       // bed / bolster
-      prism(cx-15*k,by-9*k,8*k,30*k,5*k,0.92);         // columns
-      prism(cx+15*k,by-9*k,8*k,30*k,5*k,0.92);
-      prism(cx,by-39*k,44*k,10*k,6*k,1.15);            // crown
-      g.fillStyle="rgba(120,165,205,.55)";             // ram
-      g.fillRect(cx-9*k,by-30*k,18*k,7*k);
-      g.fillStyle="rgba(96,170,232,.18)";g.fillRect(cx-9*k,by-23*k,18*k,2.4*k);
-      g.strokeStyle="rgba(130,175,215,.28)";g.lineWidth=1.1;
-      [-21,21].forEach(dx=>{g.beginPath();g.moveTo(cx+dx*k,by);
-        g.lineTo(cx+dx*k,by-26*k);g.stroke();});       // light curtain
-      panel(cx+26*k,by-24*k,9*k,7*k);                  // pendant
-      g.strokeStyle="rgba(100,140,180,.45)";g.beginPath();
-      g.moveTo(cx+26*k,by-17*k);g.lineTo(cx+22*k,by);g.stroke();
-      stackLight(cx-24*k,by-38*k,k);
+      /* 2.5 m wide, 4 m to the crown */
+      prism(0,0,75,13,16);                         // bolster / bed
+      prism(-30,-13,13,88,9,0.92);                 // columns
+      prism( 30,-13,13,88,9,0.92);
+      prism(0,-101,86,17,18,1.18);                 // crown
+      slab(0,-68,38,13,"rgba(120,165,205,.58)");   // ram
+      slab(0,-55,38,3,"rgba(96,170,232,.22)");
+      [-44,44].forEach(dx=>post(dx,0,5,64,"rgba(46,70,94,.92)"));  // light curtain
+      post(54*dir,0,6,58,"rgba(38,58,80,.95)");             // pendant stand
+      screen(54*dir,-58,20,16);                             // pendant
+      andon(-58);
     } else if(h.kind==="cnc"){
-      prism(cx,by,50*k,30*k,9*k);                      // enclosure
-      g.fillStyle="rgba(10,18,27,.92)";g.fillRect(cx-19*k,by-26*k,24*k,16*k);
-      g.fillStyle="rgba(96,170,232,.22)";g.fillRect(cx-18*k,by-25*k,22*k,14*k);
-      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1;
-      g.strokeRect(cx-19*k+.5,by-26*k+.5,24*k,16*k);   // window
-      g.fillStyle="rgba(70,104,138,.85)";g.fillRect(cx-20*k,by-16*k,26*k,2*k);
-      panel(cx+15*k,by-26*k,13*k,11*k);                // HMI
-      prism(cx+30*k,by,12*k,12*k,5*k,0.86);            // chip conveyor
-      g.fillStyle="rgba(90,130,175,.3)";g.fillRect(cx+24*k,by-13*k,13*k,3*k);
-      stackLight(cx-25*k,by-30*k,k);
+      /* 3.2 m wide, 2.4 m tall enclosure */
+      prism(0,0,96,72,18);
+      g.fillStyle="rgba(10,18,27,.92)";                    // window reveal
+      g.fillRect(cx-40*U,by-64*U,48*U,32*U);
+      g.fillStyle="rgba(96,170,232,.24)";
+      g.fillRect(cx-38*U,by-62*U,44*U,28*U);
+      g.strokeStyle="rgba(130,175,215,.32)";g.lineWidth=1.2;
+      g.strokeRect(cx-40*U+.5,by-64*U+.5,48*U,32*U);
+      slab(-16,-30,52,4,"rgba(70,104,138,.9)");            // door rail
+      screen(34,-60,24,19);                                // HMI
+      prism(62*dir,0,26,28,11,0.86);                       // chip conveyor
+      slab(50*dir,-30,30,6,"rgba(90,130,175,.34)");
+      andon(-58);
     } else if(h.kind==="bench"){
-      prism(cx,by,52*k,4*k,9*k,1.1);                   // worktop
-      [-22,22].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
-        g.fillRect(cx+dx*k-1.6*k,by-4*k,3.2*k,4*k);}); // legs
-      prism(cx,by-22*k,48*k,3*k,6*k,0.9);              // shelf
+      /* 3 m long, 0.9 m high, bin rack over it */
+      post(-40,0,6,27); post(40,0,6,27);
+      prism(0,-27,92,8,16,1.12);                           // worktop
+      post(-40,-35,4,28,"rgba(26,42,58,.9)");              // rack uprights
+      post( 40,-35,4,28,"rgba(26,42,58,.9)");
+      prism(0,-63,88,6,12,0.92);                           // shelf
       for(let i=0;i<5;i++){
-        g.fillStyle="rgba(150,120,70,.32)";
-        g.fillRect(cx-21*k+i*9.4*k,by-21*k,7.4*k,5.4*k);
-        g.strokeStyle="rgba(150,120,70,.5)";g.lineWidth=.8;
-        g.strokeRect(cx-21*k+i*9.4*k+.4,by-21*k+.4,7.4*k,5.4*k);
+        const bx=cx+(-36+i*18)*U;
+        g.fillStyle="rgba(150,120,70,.34)";g.fillRect(bx,by-61*U,14*U,11*U);
+        g.strokeStyle="rgba(150,120,70,.55)";g.lineWidth=.9;
+        g.strokeRect(bx+.5,by-61*U+.5,14*U,11*U);
       }
-      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1.1;
-      g.beginPath();g.moveTo(cx+24*k,by-4*k);g.lineTo(cx+24*k,by-26*k);
-      g.lineTo(cx+12*k,by-28*k);g.stroke();
-      const gl=g.createRadialGradient(cx+10*k,by-26*k,0,cx+10*k,by-26*k,20*k);
-      gl.addColorStop(0,"rgba(150,200,245,.13)");gl.addColorStop(1,"rgba(150,200,245,0)");
-      g.fillStyle=gl;g.beginPath();g.arc(cx+10*k,by-26*k,20*k,0,7);g.fill();
+      g.strokeStyle="rgba(130,175,215,.32)";g.lineWidth=1.3;g.beginPath();
+      g.moveTo(cx+44*dir*U,by-27*U);g.lineTo(cx+44*dir*U,by-74*U);
+      g.lineTo(cx+20*dir*U,by-78*U);g.stroke();            // task lamp
+      const gl=g.createRadialGradient(cx+18*dir*U,by-74*U,0,cx+18*dir*U,by-74*U,34*U);
+      gl.addColorStop(0,"rgba(150,200,245,.15)");gl.addColorStop(1,"rgba(150,200,245,0)");
+      g.fillStyle=gl;g.beginPath();g.arc(cx+18*dir*U,by-74*U,34*U,0,7);g.fill();
     } else if(h.kind==="booth"){
-      g.fillStyle="rgba(14,24,34,.75)";g.fillRect(cx-30*k,by-3*k,60*k,7*k);
-      g.strokeStyle="rgba(110,150,190,.18)";g.lineWidth=.8;
-      for(let i=0;i<10;i++){g.beginPath();g.moveTo(cx-30*k+i*6*k,by-3*k);
-        g.lineTo(cx-30*k+i*6*k,by+4*k);g.stroke();}    // grating
-      prism(cx,by-3*k,58*k,34*k,10*k,0.78);            // back wall
-      prism(cx-29*k,by-3*k,8*k,36*k,9*k,0.92);         // side returns
-      prism(cx+29*k,by-3*k,8*k,36*k,9*k,0.72);
-      g.fillStyle="rgba(96,170,232,.14)";g.fillRect(cx-24*k,by-34*k,48*k,27*k);
-      for(let i=0;i<4;i++){
-        g.fillStyle="rgba(120,160,200,.16)";
-        g.fillRect(cx-22*k+i*11.5*k,by-33*k,10*k,24*k);
-        g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=.8;
-        g.strokeRect(cx-22*k+i*11.5*k+.4,by-33*k+.4,10*k,24*k);
-      }                                                 // filter bank
-      prism(cx,by-37*k,64*k,7*k,11*k,1.2);             // extraction hood
-      g.fillStyle="rgba(90,130,175,.3)";g.fillRect(cx-6*k,by-56*k,12*k,12*k);
+      /* 5 m wide, 3.2 m tall, open at the front */
+      g.fillStyle="rgba(27,43,59,.88)";                    // floor grating
+      g.fillRect(cx-82*U,by-9*U,164*U,11*U);
+      g.strokeStyle="rgba(110,150,190,.28)";g.lineWidth=.9;
+      for(let i=0;i<=14;i++){g.beginPath();
+        g.moveTo(cx-82*U+i*11.7*U,by-9*U);g.lineTo(cx-82*U+i*11.7*U,by+2*U);g.stroke();}
+      prism(0,-5,150,96,20,0.76);                          // back wall
+      for(let i=0;i<5;i++){                                // filter bank
+        const fx=cx+(-62+i*31)*U;
+        g.fillStyle="rgba(120,160,200,.17)";g.fillRect(fx,by-96*U,26*U,74*U);
+        g.strokeStyle="rgba(130,175,215,.24)";g.lineWidth=.9;
+        g.strokeRect(fx+.5,by-96*U+.5,26*U,74*U);
+      }
+      prism(-76,-5,18,104,14,0.94);                        // side returns
+      prism( 76,-5,18,104,14,0.70);
+      prism(0,-109,172,18,22,1.22);                        // extraction hood
+      post(0,-127,26,26,"rgba(90,130,175,.34)");           // duct
     } else if(h.kind==="pack"){
-      prism(cx,by,70*k,11*k,9*k,1.05);                 // belt bed on a frame
-      g.fillStyle="rgba(80,116,150,.85)";
-      for(let i=0;i<12;i++) g.fillRect(cx-34*k+i*5.8*k,by-12.5*k,2.4*k,5.5*k);
-      g.strokeStyle="rgba(130,175,215,.22)";g.lineWidth=1;  // side rails
-      g.beginPath();g.moveTo(cx-35*k,by-13*k);g.lineTo(cx+35*k,by-13*k);g.stroke();
-      [-30,-10,10,30].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
-        g.fillRect(cx+dx*k-1.4*k,by-4*k,2.8*k,4*k);});
-      prism(cx+26*k,by-4*k,13*k,22*k,6*k,0.9);         // strapping head
-      panel(cx+26*k,by-24*k,9*k,6*k);
-      for(let i=0;i<3;i++)
+      /* 6 m roller conveyor, 0.9 m high */
+      [-76,-26,26,76].forEach(dx=>post(dx,0,6,27));
+      prism(0,-27,180,9,16,1.06);                          // belt bed
+      g.fillStyle="rgba(80,116,150,.85)";                  // rollers
+      for(let i=0;i<22;i++) g.fillRect(cx-88*U+i*8.2*U,by-37*U,3.4*U,9*U);
+      g.strokeStyle="rgba(130,175,215,.26)";g.lineWidth=1.1;g.beginPath();
+      g.moveTo(cx-90*U,by-38*U);g.lineTo(cx+90*U,by-38*U);g.stroke();
+      prism(68*dir,-36,32,52,12,0.9);                      // strapping head
+      screen(68*dir,-64,20,14);   // on the head, not over it
+      for(let i=0;i<3;i++)                                 // cartons on the belt
         for(let j=0;j<(i===1?2:1);j++)
-          prism(cx-24*k+i*15*k,by-13*k-j*7*k,11*k,7*k,5*k,1.0+j*0.08);
-      prism(cx-40*k,by,16*k,3*k,7*k,0.7);              // pallet
+          prism(-56+i*40,-38-j*18,26,18,11,1.0+j*0.07);
+      prism(-104*dir,0,38,7,16,0.72);                      // pallet
     } else {
-      prism(cx,by,38*k,4*k,8*k,1.08);                  // granite table
-      [-15,15].forEach(dx=>{g.fillStyle="rgba(20,34,47,.95)";
-        g.fillRect(cx+dx*k-1.6*k,by-4*k,3.2*k,4*k);});
-      prism(cx-10*k,by-4*k,4*k,20*k,3*k,0.95);         // height gauge
-      g.fillStyle="rgba(120,165,205,.5)";g.fillRect(cx-9*k,by-16*k,11*k,2.4*k);
-      panel(cx+12*k,by-18*k,11*k,8*k);
-      g.strokeStyle="rgba(130,175,215,.3)";g.lineWidth=1.1;
-      g.beginPath();g.moveTo(cx+17*k,by-4*k);g.lineTo(cx+17*k,by-30*k);
-      g.lineTo(cx+2*k,by-32*k);g.stroke();
-      const gl=g.createRadialGradient(cx,by-30*k,0,cx,by-30*k,26*k);
-      gl.addColorStop(0,"rgba(150,200,245,.17)");gl.addColorStop(1,"rgba(150,200,245,0)");
-      g.fillStyle=gl;g.beginPath();g.arc(cx,by-30*k,26*k,0,7);g.fill();
-      prism(cx+26*k,by,10*k,8*k,5*k,0.72);             // reject bin
+      /* 2 m inspection table, height gauge, lamp */
+      post(-26,0,6,27); post(26,0,6,27);
+      prism(0,-27,62,8,14,1.10);                           // granite table
+      prism(-22,-35,9,48,7,0.95);                          // gauge column
+      slab(-14,-62,24,5,"rgba(120,165,205,.55)");          // gauge arm
+      post(18,-35,6,17,"rgba(34,54,74,.95)");              // readout stand
+      screen(18,-52,22,15);                                // readout
+      g.strokeStyle="rgba(130,175,215,.34)";g.lineWidth=1.5;g.beginPath();
+      g.moveTo(cx+42*U,by-27*U);g.lineTo(cx+42*U,by-88*U);
+      g.lineTo(cx+8*U,by-92*U);g.stroke();                 // lamp, clear of the gauge
+      const gl=g.createRadialGradient(cx+6*U,by-88*U,0,cx+6*U,by-88*U,42*U);
+      gl.addColorStop(0,"rgba(150,200,245,.19)");gl.addColorStop(1,"rgba(150,200,245,0)");
+      g.fillStyle=gl;g.beginPath();g.arc(cx+4*dir*U,by-84*U,42*U,0,7);g.fill();
+      prism(56*dir,0,24,22,11,0.72);                       // reject bin
     }
-  });
+  };
+  HUBS.slice().sort((a,b)=>a.y-b.y).forEach(machine);
 
   /* props, so the bay is not six machines on an empty slab */
-  [[0.30,0.52],[0.70,0.46],[0.93,0.92]].forEach((p,i)=>{
+  [[0.30,0.55,1],[0.70,0.50,0],[0.93,0.95,1],[0.07,0.93,0]].forEach(p=>{
     const q=proj(p[0],p[1],W,H),k=q.s;
     g.fillStyle="rgba(10,17,25,.35)";
-    g.beginPath();g.ellipse(q.x,q.y+1,10*k,3*k,0,0,7);g.fill();
-    g.fillStyle="rgba(150,120,70,.20)";g.fillRect(q.x-9*k,q.y-7*k,18*k,7*k);
-    g.strokeStyle="rgba(150,120,70,.34)";g.lineWidth=.9;
-    g.strokeRect(q.x-9*k+.5,q.y-7*k+.5,18*k,7*k);
-    if(i===1){g.fillStyle="rgba(150,120,70,.16)";g.fillRect(q.x-9*k,q.y-13*k,18*k,6*k);}
+    g.beginPath();g.ellipse(q.x,q.y+1,22*k,6*k,0,0,7);g.fill();
+    g.fillStyle="rgba(150,120,70,.22)";g.fillRect(q.x-20*k,q.y-17*k,40*k,17*k);
+    g.strokeStyle="rgba(150,120,70,.38)";g.lineWidth=1;
+    g.strokeRect(q.x-20*k+.5,q.y-17*k+.5,40*k,17*k);
+    if(p[2]){g.fillStyle="rgba(150,120,70,.17)";g.fillRect(q.x-20*k,q.y-31*k,40*k,14*k);}
   });
 
   return cv;
@@ -716,8 +748,10 @@ function spot(w,h,i,n){
   const row=Math.floor(i/cols), rows=Math.ceil(n/cols), col=i%cols;
   const sx=(cols===1)?0:(col/(cols-1)-0.5);
   const sy=(rows===1)?0:(row/(rows-1)-0.5);
-  return {x:clamp(h.x+sx*h.dx*1.15+w.ox*0.035,0.04,0.96),
-          y:clamp(h.y+sy*h.dy*0.82+w.oy*0.03+h.dy*0.38,0.06,0.985)};
+  /* the jitter has to scale with the zone, or on the shallow far row it
+     pushes a worker outside the very fence that is counting them */
+  return {x:clamp(h.x+sx*h.dx*1.15+w.ox*h.dx*0.20,0.04,0.96),
+          y:clamp(h.y+sy*h.dy*0.74+w.oy*h.dy*0.12+h.dy*0.46,0.06,0.985)};
 }
 
 function drawScene(ctx,W,H,st,min,t,onto){
@@ -821,9 +855,9 @@ function drawScene(ctx,W,H,st,min,t,onto){
     /* route so far — the shape of a shift, which is what tracking buys */
     const stops=[];
     for(const sg of FL_SEG){ if(sg.t>min) break; if(sg.hub) stops.push(sg.hub); }
-    const route=stops.filter((v,i)=>i===0||v!==stops[i-1]).slice(-6);
+    const route=stops.filter((v,i)=>i===0||v!==stops[i-1]).slice(-4);
     if(route.length>1){
-      ctx.setLineDash([2,4]);ctx.strokeStyle="rgba(150,225,255,.22)";ctx.lineWidth=1.1;
+      ctx.setLineDash([2,5]);ctx.strokeStyle="rgba(150,225,255,.13)";ctx.lineWidth=1;
       ctx.beginPath();
       route.forEach((hid,i)=>{const hh=HUBS[HUBI[hid]];
         const q=proj(hh.x-hh.dx*0.75,hh.y+hh.dy*0.55,W,H);
